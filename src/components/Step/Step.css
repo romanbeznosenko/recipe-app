@@ -1,0 +1,28 @@
+.step-container {
+    margin-bottom: 20px;
+}
+
+.step-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.step-description {
+    font-size: 16px;
+    color: #666;
+}
+
+.step-details {
+    font-size: 16px;
+    color: #333;
+}
+
+.step-info {
+    white-space: pre-line;
+}
+
+.step-info strong {
+    font-weight: bold;
+}
