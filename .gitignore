@@ -1,23 +1,98 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
+# Frontend dependencies
+/frontend/node_modules
+/frontend/.pnp
+/frontend/.pnp.js
 
-# testing
-/coverage
+# Frontend testing
+/frontend/coverage
 
-# production
-/build
+# Frontend production build
+/frontend/build
 
-# misc
+# Frontend misc
+/frontend/.DS_Store
+/frontend/.env.local
+/frontend/.env.development.local
+/frontend/.env.test.local
+/frontend/.env.production.local
+
+# Frontend logs
+/frontend/npm-debug.log*
+/frontend/yarn-debug.log*
+/frontend/yarn-error.log*
+
+# Backend
+/backend/venv/
+/backend/__pycache__/
+/backend/**/__pycache__/
+/backend/.pytest_cache/
+/backend/.coverage
+/backend/htmlcov/
+/backend/dist/
+/backend/build/
+/backend/*.egg-info/
+
+# Environment variables
+.env
+/backend/.env
+/frontend/.env
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
 .DS_Store
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Database
+*.sqlite3
+*.db
+
+# Logs
+logs/
+*.log
+
+# Temp files
+tmp/
+temp/
+
+# Python specific
+*.py[cod]
+*$py.class
+*.so
+.Python
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Alembic migrations (optional, you might want to keep these in version control)
+# /backend/alembic/versions/*
+# !.gitkeep
