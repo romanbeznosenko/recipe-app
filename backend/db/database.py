@@ -42,12 +42,26 @@ def seed_database():
         print("Seeding database...")
         
         print("Creating users...")
-        admin = User(username="admin", email="admin@example.com")
-        chef_john = User(username="chef_john", email="chef@example.com")
-        home_cook = User(username="home_cook", email="cook@example.com")
+        admin = User(
+            username="admin", 
+            email="admin@example.com"
+        )
+        admin.password = "Admin123!"  # Will be automatically hashed
+        
+        chef_john = User(
+            username="chef_john", 
+            email="chef@example.com"
+        )
+        chef_john.password = "ChefJohn123!"
+        
+        home_cook = User(
+            username="home_cook", 
+            email="cook@example.com"
+        )
+        home_cook.password = "HomeCook123!"
         
         session.add_all([admin, chef_john, home_cook])
-        session.flush()
+        session.flush()  # Flush to get IDs
         
         print("Creating ingredients...")
         ingredients = [

@@ -3,6 +3,7 @@ from db.entries.TimestampMixin import TimestampMixin
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 
+
 class Recipe(Base, TimestampMixin):
     __tablename__ = "recipes"
 
@@ -17,5 +18,7 @@ class Recipe(Base, TimestampMixin):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     user = relationship("User", back_populates="recipes")
-    steps = relationship("Step", back_populates="recipe", cascade="all, delete-orphan")
-    recipe_ingredients = relationship("RecipeIngredient", back_populates="recipe", cascade="all, delete-orphan")
+    steps = relationship("Step", back_populates="recipe",
+                         cascade="all, delete-orphan")
+    recipe_ingredients = relationship(
+        "RecipeIngredient", back_populates="recipe", cascade="all, delete-orphan")
