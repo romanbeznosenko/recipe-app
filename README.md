@@ -68,3 +68,87 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+
+# Project Structure 
+```
+recipe-app/
+│
+├── backend/                  # FastAPI backend
+│   ├── app/                  # Main application folder
+│   │   ├── __init__.py       # Makes app a package
+│   │   ├── main.py           # Main FastAPI app
+│   │   ├── database.py       # Database connection and session
+│   │   ├── models.py         # SQLAlchemy models
+│   │   ├── schemas.py        # Pydantic schemas
+│   │   ├── auth.py           # Authentication utilities
+│   │   └── routers/          # API routes separated by resource
+│   │       ├── __init__.py
+│   │       ├── users.py      # User routes
+│   │       ├── recipes.py    # Recipe routes
+│   │       ├── ingredients.py # Ingredient routes
+│   │       └── auth.py       # Auth routes
+│   ├── alembic/              # Database migrations (optional)
+│   │   ├── versions/
+│   │   └── alembic.ini
+│   ├── sql/                  # SQL scripts
+│   │   └── init.sql          # Initial database setup
+│   ├── requirements.txt      # Python dependencies
+│   ├── .env.example          # Environment variables example
+│   ├── .env                  # Environment variables (gitignored)
+│   └── Dockerfile            # For containerization (optional)
+│
+├── frontend/                 # React frontend
+│   ├── public/               # Static files
+│   │   ├── index.html
+│   │   ├── favicon.ico
+│   │   └── ...
+│   ├── src/                  # Source code
+│   │   ├── assets/           # Images, fonts, etc.
+│   │   ├── components/       # Reusable React components
+│   │   │   ├── TopNav/
+│   │   │   │   ├── TopNav.js
+│   │   │   │   └── TopNav.css
+│   │   │   ├── Step/
+│   │   │   │   ├── Step.js
+│   │   │   │   └── Step.css
+│   │   │   ├── Recipe/
+│   │   │   │   ├── Recipe.js
+│   │   │   │   └── Recipe.css
+│   │   │   └── RecipeCard/
+│   │   │       ├── RecipeCard.js
+│   │   │       └── RecipeCard.css
+│   │   ├── pages/            # Page components
+│   │   │   ├── HomePage/
+│   │   │   │   ├── HomePage.js
+│   │   │   │   └── HomePage.css
+│   │   │   ├── RecipePage/
+│   │   │   │   ├── RecipePage.js
+│   │   │   │   └── RecipePage.css
+│   │   │   ├── LoginPage/
+│   │   │   │   ├── LoginPage.js
+│   │   │   │   └── LoginPage.css
+│   │   │   └── SignUpPage/
+│   │   │       ├── SignUpPage.js
+│   │   │       └── SignUpPage.css
+│   │   ├── services/         # API services
+│   │   │   ├── api.js        # API client setup (axios)
+│   │   │   ├── auth.js       # Authentication service
+│   │   │   └── recipe.js     # Recipe service
+│   │   ├── context/          # React context providers
+│   │   │   └── AuthContext.js # Auth context
+│   │   ├── utils/            # Utility functions
+│   │   │   └── helpers.js
+│   │   ├── hooks/            # Custom React hooks
+│   │   │   └── useAuth.js    # Auth hook
+│   │   ├── App.js            # Main App component
+│   │   ├── index.js          # Entry point
+│   │   └── App.css           # Global styles
+│   ├── package.json          # npm dependencies
+│   ├── README.md             # Frontend documentation
+│   └── Dockerfile            # For containerization (optional)
+│
+├── docker-compose.yml        # Docker compose setup (optional)
+├── .gitignore                # Git ignore file
+└── README.md                 # Project documentation
+```

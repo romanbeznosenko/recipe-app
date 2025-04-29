@@ -1,10 +1,10 @@
+from routers.auth_router import router as auth_router
+from routers.user_router import router as user_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
 
 from db.setup_models import init_models
-
-from routers.user_router import router as user_router
-
 init_models()
 
 app = FastAPI(
@@ -21,7 +21,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 app.include_router(user_router)
+app.include_router(auth_router)
 
 
 @app.get("/")
@@ -41,5 +43,4 @@ def health_check():
 
 
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

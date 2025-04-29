@@ -4,7 +4,6 @@ from sqlalchemy.exc import IntegrityError
 from typing import List, Annotated
 from pydantic import BaseModel, EmailStr, Field, SecretStr
 
-
 from db.base import get_db
 from db.entries.User import User
 
@@ -16,12 +15,14 @@ router = APIRouter(
 
 
 class UserBase(BaseModel):
+    """Base User schema with shared attributes"""
     username: str = Field(..., min_length=3, max_length=50, example="johndoe")
     email: EmailStr = Field(..., example="john@example.com")
 
 
 class UserCreate(UserBase):
-    password: SecretStr = Field(
+    """Schema for creating a user with password"""
+    password: str = Field(
         ...,
         min_length=8,
         example="password123",
@@ -30,6 +31,7 @@ class UserCreate(UserBase):
 
 
 class UserResponse(UserBase):
+    """Schema for returning a user (without password)"""
     id: int
 
     class Config:
@@ -39,7 +41,7 @@ class UserResponse(UserBase):
 @router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: Annotated[Session, Depends(get_db)]):
     """
-    Create a new user with securely hashed password
+    Create a new user with securely hashed password (signup)
 
     Args:
         user: User data with password
@@ -52,18 +54,6 @@ def create_user(user: UserCreate, db: Annotated[Session, Depends(get_db)]):
         HTTPException: If username or email already exists
     """
     try:
-        db_user = User(
-            username=user.username,
-            email=user.email
-        )
-        db_user.password = user.password.get_secret_value()
-
-        db.add(db_user)
-        db.commit()
-        db.refresh(db_user)
-        return db_user
-    except IntegrityError:
-        db.rollback()
         existing_username = db.query(User).filter(
             User.username == user.username).first()
         if existing_username:
@@ -71,11 +61,31 @@ def create_user(user: UserCreate, db: Annotated[Session, Depends(get_db)]):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Username already registered"
             )
-        else:
+
+        existing_email = db.query(User).filter(
+            User.email == user.email).first()
+        if existing_email:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered"
             )
+
+        db_user = User(
+            username=user.username,
+            email=user.email
+        )
+        db_user.password = user.password
+
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        return db_user
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Error creating user. Username or email may already be in use."
+        )
 
 
 @router.get("/", response_model=List[UserResponse])
