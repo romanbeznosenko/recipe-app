@@ -55,6 +55,7 @@ const HomePage = () => {
                     {filterRecipes.map((recipe) => (
                         <RecipeCard
                             key={recipe.id}
+                            id={recipe.id}
                             title={recipe.title}
                             description={recipe.description}
                             cookingTime={recipe.cookingTime}
