@@ -73,82 +73,57 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/t
 # Project Structure 
 ```
 recipe-app/
-│
-├── backend/                  # FastAPI backend
-│   ├── app/                  # Main application folder
-│   │   ├── __init__.py       # Makes app a package
-│   │   ├── main.py           # Main FastAPI app
-│   │   ├── database.py       # Database connection and session
-│   │   ├── models.py         # SQLAlchemy models
-│   │   ├── schemas.py        # Pydantic schemas
-│   │   ├── auth.py           # Authentication utilities
-│   │   └── routers/          # API routes separated by resource
-│   │       ├── __init__.py
-│   │       ├── users.py      # User routes
-│   │       ├── recipes.py    # Recipe routes
-│   │       ├── ingredients.py # Ingredient routes
-│   │       └── auth.py       # Auth routes
-│   ├── alembic/              # Database migrations (optional)
-│   │   ├── versions/
-│   │   └── alembic.ini
-│   ├── sql/                  # SQL scripts
-│   │   └── init.sql          # Initial database setup
-│   ├── requirements.txt      # Python dependencies
-│   ├── .env.example          # Environment variables example
-│   ├── .env                  # Environment variables (gitignored)
-│   └── Dockerfile            # For containerization (optional)
-│
-├── frontend/                 # React frontend
-│   ├── public/               # Static files
-│   │   ├── index.html
-│   │   ├── favicon.ico
-│   │   └── ...
-│   ├── src/                  # Source code
-│   │   ├── assets/           # Images, fonts, etc.
-│   │   ├── components/       # Reusable React components
-│   │   │   ├── TopNav/
-│   │   │   │   ├── TopNav.js
-│   │   │   │   └── TopNav.css
-│   │   │   ├── Step/
-│   │   │   │   ├── Step.js
-│   │   │   │   └── Step.css
-│   │   │   ├── Recipe/
-│   │   │   │   ├── Recipe.js
-│   │   │   │   └── Recipe.css
-│   │   │   └── RecipeCard/
-│   │   │       ├── RecipeCard.js
-│   │   │       └── RecipeCard.css
-│   │   ├── pages/            # Page components
-│   │   │   ├── HomePage/
-│   │   │   │   ├── HomePage.js
-│   │   │   │   └── HomePage.css
-│   │   │   ├── RecipePage/
-│   │   │   │   ├── RecipePage.js
-│   │   │   │   └── RecipePage.css
-│   │   │   ├── LoginPage/
-│   │   │   │   ├── LoginPage.js
-│   │   │   │   └── LoginPage.css
-│   │   │   └── SignUpPage/
-│   │   │       ├── SignUpPage.js
-│   │   │       └── SignUpPage.css
-│   │   ├── services/         # API services
-│   │   │   ├── api.js        # API client setup (axios)
-│   │   │   ├── auth.js       # Authentication service
-│   │   │   └── recipe.js     # Recipe service
-│   │   ├── context/          # React context providers
-│   │   │   └── AuthContext.js # Auth context
-│   │   ├── utils/            # Utility functions
-│   │   │   └── helpers.js
-│   │   ├── hooks/            # Custom React hooks
-│   │   │   └── useAuth.js    # Auth hook
-│   │   ├── App.js            # Main App component
-│   │   ├── index.js          # Entry point
-│   │   └── App.css           # Global styles
-│   ├── package.json          # npm dependencies
-│   ├── README.md             # Frontend documentation
-│   └── Dockerfile            # For containerization (optional)
-│
-├── docker-compose.yml        # Docker compose setup (optional)
-├── .gitignore                # Git ignore file
-└── README.md                 # Project documentation
+├── backend/
+│   ├── db/
+│   │   ├── base.py                 # Database connection and Base definition
+│   │   ├── database.py             # Database operations and reset functions
+│   │   ├── entries/                # Model definitions
+│   │   └── utils/
+│   │       └── mixins.py           # TimestampMixin for created_at/updated_at
+│   ├── routers/
+│   │   ├── user_router.py          # User and signup endpoints
+│   │   └── auth_router.py          # Authentication endpoints
+│   ├── main.py                     # FastAPI application
+│   ├── setup_models.py             # Model initialization to avoid circular imports
+│   ├── database.py           # Database initialization and seeding
+│   ├── requirements.txt            # Backend dependencies
+|   └── docker-compose.yml          # Docker configuration
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   └── App.js                  # Main React app with routing
+│   ├── package.json                # Frontend dependencies
+│   └── public/                     # Public assets
+```
+
+# Run the Backend
+
+1. Clone the repository
+``` bash
+git clone https://github.com/romanbeznosenko/recipe-app
+```
+2. Run the Docker
+``` bash
+cd recipe-app
+cd backend
+docker-compose up -d
+```
+3. Install dependencies
+``` bash
+pip install -r requirements.txt
+```
+4. Populate Databse
+``` bash
+python -m db.database
+```
+5. Run API 
+``` bash
+python -m main
+```
+
+# Run Frontend
+``` bash
+cd frontend
+npm start
 ```

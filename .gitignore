@@ -34,11 +34,6 @@
 /backend/build/
 /backend/*.egg-info/
 
-# Environment variables
-.env
-/backend/.env
-/frontend/.env
-
 # IDE specific files
 .idea/
 .vscode/
@@ -66,7 +61,6 @@ temp/
 __pycache__/
 *.py[cod]
 *$py.class
-.env
 .venv
 env/
 venv/
