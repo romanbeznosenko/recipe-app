@@ -4,16 +4,17 @@ import LoginPage from "./pages/LoginPage/LoginPage";
 import SignUpPage from "./pages/SignUpPage/SignUpPage";
 import ProfilePage from "./pages/ProfilePage/ProfilePage";
 import RecipePage from "./pages/RecipePage/RecipePage";
+import CreateRecipePage from "./pages/CreateRecipePage/CreateRecipePage";
 import "./App.css";
 
 // Protected route component
 const ProtectedRoute = ({ children }) => {
   const isAuthenticated = localStorage.getItem("token") !== null;
-
+  
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
-
+  
   return children;
 };
 
@@ -25,15 +26,23 @@ function App() {
         <Route path="/home" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignUpPage />} />
-        <Route
-          path="/profile"
+        <Route 
+          path="/profile" 
           element={
             <ProtectedRoute>
               <ProfilePage />
             </ProtectedRoute>
-          }
+          } 
         />
         <Route path="/recipe/:recipeId" element={<RecipePage />} />
+        <Route 
+          path="/create-recipe" 
+          element={
+            <ProtectedRoute>
+              <CreateRecipePage />
+            </ProtectedRoute>
+          } 
+        />
       </Routes>
     </Router>
   );

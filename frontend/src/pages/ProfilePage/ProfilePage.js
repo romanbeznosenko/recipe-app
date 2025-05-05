@@ -17,12 +17,12 @@ const ProfilePage = () => {
         const checkAuth = () => {
             const token = localStorage.getItem("token");
             const userData = localStorage.getItem("user");
-            
+
             if (!token || !userData) {
                 navigate("/login");
                 return;
             }
-            
+
             try {
                 setUser(JSON.parse(userData));
             } catch (err) {
@@ -32,7 +32,7 @@ const ProfilePage = () => {
                 navigate("/login");
             }
         };
-        
+
         checkAuth();
     }, [navigate]);
 
@@ -40,21 +40,21 @@ const ProfilePage = () => {
     useEffect(() => {
         const fetchUserRecipes = async () => {
             if (!user) return;
-            
+
             try {
                 setLoading(true);
                 setError("");
-                
+
                 // Get token from localStorage
                 const token = localStorage.getItem("token");
-                
+
                 // Fetch user's recipes using the service
                 const data = await getCurrentUserRecipes(token);
                 setRecipes(data);
                 setLoading(false);
             } catch (err) {
                 console.error("Error fetching recipes:", err);
-                
+
                 // If unauthorized (401), redirect to login
                 if (err.message.includes("401")) {
                     localStorage.removeItem("token");
@@ -62,14 +62,14 @@ const ProfilePage = () => {
                     navigate("/login");
                     return;
                 }
-                
+
                 setError("Failed to load recipes. Please try again later.");
                 // Fallback to mock data in development
                 setRecipes(mockRecipes);
                 setLoading(false);
             }
         };
-        
+
         fetchUserRecipes();
     }, [user, navigate]);
 
@@ -122,8 +122,9 @@ const ProfilePage = () => {
                         </div>
                         <div className="user-actions">
                             <button className="edit-profile-btn">Edit Profile</button>
-                            <button className="create-recipe-btn">Create Recipe</button>
-                            <button className="logout-btn" onClick={handleLogout}>Logout</button>
+                            <button className="create-recipe-btn" onClick={() => navigate('/create-recipe')}>
+                                Create Recipe
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -131,9 +132,9 @@ const ProfilePage = () => {
                 {/* Main Content Area */}
                 <div className="profile-main">
                     <h1>My Recipes</h1>
-                    
+
                     {error && <div className="error-message">{error}</div>}
-                    
+
                     {loading ? (
                         <div className="loading">Loading recipes...</div>
                     ) : (

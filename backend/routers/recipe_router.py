@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 from db.base import get_db
@@ -18,6 +18,7 @@ router = APIRouter(
 )
 
 # ========== Pydantic Models ==========
+
 
 class RecipeBase(BaseModel):
     """Base Recipe schema with shared attributes"""
@@ -49,7 +50,7 @@ class IngredientResponse(BaseModel):
     name: str
     quantity: float
     unit: str
-    
+
     class Config:
         from_attributes = True
 
@@ -63,9 +64,76 @@ class StepResponse(BaseModel):
     speed: int
     duration: int
     description: str
-    
+
     class Config:
         from_attributes = True
+
+
+# Update the model definitions in recipe_router.py
+
+class StepCreate(BaseModel):
+    """Schema for creating a recipe step"""
+    order_number: int = Field(..., ge=1, example=1)
+    action_type: str = Field(..., example="mix")
+    temperature: int = Field(0, ge=0, example=180)
+    speed: int = Field(0, ge=0, example=2)
+    duration: int = Field(0, ge=0, example=10)
+    description: str = Field(..., example="Mix the ingredients until smooth")
+
+
+class IngredientCreate(BaseModel):
+    """Schema for creating a recipe ingredient"""
+    ingredient_id: int = Field(..., gt=0, example=1)
+    quantity: float = Field(..., gt=0, example=200.0)
+    # Will be set after steps are created
+    step_id: Optional[int] = Field(None, example=None)
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "ingredient_id": 1,
+                "quantity": 200.0,
+                "step_id": None
+            }
+        }
+
+
+class CompleteRecipeCreate(BaseModel):
+    """Schema for creating a complete recipe with steps and ingredients"""
+    recipe: RecipeCreate
+    steps: List[StepCreate]
+    ingredients: List[IngredientCreate]
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "recipe": {
+                    "title": "Spaghetti Carbonara",
+                    "description": "A classic Italian pasta dish",
+                    "is_public": True,
+                    "preparation_time": 15,
+                    "cooking_time": 20,
+                    "servings": 4
+                },
+                "steps": [
+                    {
+                        "order_number": 1,
+                        "action_type": "prep",
+                        "temperature": 0,
+                        "speed": 0,
+                        "duration": 5,
+                        "description": "Prepare ingredients"
+                    }
+                ],
+                "ingredients": [
+                    {
+                        "ingredient_id": 1,
+                        "quantity": 200.0,
+                        "step_id": None
+                    }
+                ]
+            }
+        }
 
 
 # ========== Helper Functions ==========
@@ -73,21 +141,21 @@ class StepResponse(BaseModel):
 def get_recipe_or_404(recipe_id: int, db: Session):
     """
     Get a recipe by ID or raise a 404 exception
-    
+
     Args:
         recipe_id: Recipe ID
         db: Database session
-        
+
     Returns:
         Recipe object
-        
+
     Raises:
         HTTPException: If recipe not found
     """
     recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()
     if recipe is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Recipe not found"
         )
     return recipe
@@ -96,14 +164,14 @@ def get_recipe_or_404(recipe_id: int, db: Session):
 def get_user_or_404(user_id: int, db: Session):
     """
     Get a user by ID or raise a 404 exception
-    
+
     Args:
         user_id: User ID
         db: Database session
-        
+
     Returns:
         User object
-        
+
     Raises:
         HTTPException: If user not found
     """
@@ -120,8 +188,8 @@ def get_user_or_404(user_id: int, db: Session):
 
 @router.get("/", response_model=List[RecipeResponse])
 def get_recipes(
-    skip: int = 0, 
-    limit: int = 100, 
+    skip: int = 0,
+    limit: int = 100,
     db: Session = Depends(get_db)
 ):
     """
@@ -138,7 +206,7 @@ def get_recipes(
     recipes = db.query(Recipe).filter(
         Recipe.is_public == True
     ).offset(skip).limit(limit).all()
-    
+
     return recipes
 
 
@@ -184,12 +252,12 @@ async def get_user_recipes(
     """
     # Check if user exists
     get_user_or_404(user_id, db)
-    
+
     # Get user's recipes
     recipes = db.query(Recipe).filter(
         Recipe.user_id == user_id
     ).offset(skip).limit(limit).all()
-    
+
     return recipes
 
 
@@ -215,7 +283,7 @@ async def get_current_user_recipes(
     recipes = db.query(Recipe).filter(
         Recipe.user_id == current_user.id
     ).offset(skip).limit(limit).all()
-    
+
     return recipes
 
 
@@ -223,20 +291,20 @@ async def get_current_user_recipes(
 def get_recipe_ingredients(recipe_id: int, db: Session = Depends(get_db)):
     """
     Get all ingredients for a specific recipe
-    
+
     Args:
         recipe_id: Recipe ID
         db: Database session
-        
+
     Returns:
         List of ingredients with quantities and units
-    
+
     Raises:
         HTTPException: If recipe not found
     """
     # Check if recipe exists
     get_recipe_or_404(recipe_id, db)
-    
+
     # Join RecipeIngredient with Ingredient to get ingredient details
     recipe_ingredients = db.query(
         RecipeIngredient.quantity,
@@ -248,7 +316,7 @@ def get_recipe_ingredients(recipe_id: int, db: Session = Depends(get_db)):
     ).filter(
         RecipeIngredient.recipe_id == recipe_id
     ).all()
-    
+
     # Format the response
     result = []
     for ri in recipe_ingredients:
@@ -258,7 +326,7 @@ def get_recipe_ingredients(recipe_id: int, db: Session = Depends(get_db)):
             "quantity": ri.quantity,
             "unit": ri.unit
         })
-    
+
     return result
 
 
@@ -266,25 +334,175 @@ def get_recipe_ingredients(recipe_id: int, db: Session = Depends(get_db)):
 def get_recipe_steps(recipe_id: int, db: Session = Depends(get_db)):
     """
     Get all steps for a specific recipe
-    
+
     Args:
         recipe_id: Recipe ID
         db: Database session
-        
+
     Returns:
         List of recipe steps in order
-    
+
     Raises:
         HTTPException: If recipe not found
     """
     # Check if recipe exists
     get_recipe_or_404(recipe_id, db)
-    
+
     # Get steps in order
     steps = db.query(Step).filter(
         Step.recipe_id == recipe_id
     ).order_by(
         Step.order_number
     ).all()
-    
+
     return steps
+
+
+@router.post("/", response_model=RecipeResponse, status_code=status.HTTP_201_CREATED)
+async def create_recipe(
+    recipe_data: RecipeCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new recipe
+
+    Args:
+        recipe_data: Recipe data
+        current_user: Currently authenticated user
+        db: Database session
+
+    Returns:
+        Created recipe
+    """
+    # Create recipe object
+    db_recipe = Recipe(
+        **recipe_data.dict(),
+        user_id=current_user.id
+    )
+
+    # Add and commit to get recipe ID
+    db.add(db_recipe)
+    db.commit()
+    db.refresh(db_recipe)
+
+    return db_recipe
+
+
+# Replace the create_complete_recipe function in recipe_router.py
+
+@router.post("/complete", response_model=RecipeResponse, status_code=status.HTTP_201_CREATED)
+async def create_complete_recipe(
+    recipe_data: CompleteRecipeCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a complete recipe with steps and ingredients
+
+    Args:
+        recipe_data: Complete recipe data with steps and ingredients
+        current_user: Currently authenticated user
+        db: Database session
+
+    Returns:
+        Created recipe
+    """
+    try:
+        # Log incoming data for debugging
+        print(f"Received recipe_data: {recipe_data}")
+
+        # 1. Create recipe
+        db_recipe = Recipe(
+            **recipe_data.recipe.dict(),
+            user_id=current_user.id
+        )
+
+        db.add(db_recipe)
+        db.flush()  # Get recipe ID without committing transaction
+
+        # 2. Create steps
+        db_steps = []
+        for step_data in recipe_data.steps:
+            step_dict = step_data.dict()
+            # Ensure all fields are the correct type
+            step_dict["order_number"] = int(step_dict["order_number"])
+            step_dict["temperature"] = int(step_dict["temperature"])
+            step_dict["speed"] = int(step_dict["speed"])
+            step_dict["duration"] = int(step_dict["duration"])
+
+            db_step = Step(
+                **step_dict,
+                recipe_id=db_recipe.id
+            )
+            db.add(db_step)
+            db_steps.append(db_step)
+
+        db.flush()  # Get step IDs
+
+        # 3. Create ingredients with step references
+        for i, ingredient_data in enumerate(recipe_data.ingredients):
+            ing_dict = ingredient_data.dict()
+
+            # Ensure all fields are the correct type
+            ing_dict["ingredient_id"] = int(ing_dict["ingredient_id"])
+            ing_dict["quantity"] = float(ing_dict["quantity"])
+
+            # If step_id is None, try to match it with a step
+            if ing_dict["step_id"] is None and i < len(db_steps):
+                step_id = db_steps[i].id
+            else:
+                step_id = ing_dict["step_id"]
+
+            db_ingredient = RecipeIngredient(
+                recipe_id=db_recipe.id,
+                ingredient_id=ing_dict["ingredient_id"],
+                quantity=ing_dict["quantity"],
+                step_id=step_id
+            )
+            db.add(db_ingredient)
+
+        # Commit all changes
+        db.commit()
+        db.refresh(db_recipe)
+
+        return db_recipe
+
+    except Exception as e:
+        db.rollback()
+        print(f"Error creating recipe: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error creating recipe: {str(e)}"
+        )
+
+
+@router.get("/ingredients/list", response_model=List[dict])
+async def get_available_ingredients(
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100
+):
+    """
+    Get all available ingredients for recipe creation
+
+    Args:
+        db: Database session
+        skip: Number of records to skip
+        limit: Maximum number of records to return
+
+    Returns:
+        List of ingredients
+    """
+    ingredients = db.query(Ingredient).offset(skip).limit(limit).all()
+
+    return [
+        {
+            "id": ingredient.id,
+            "name": ingredient.name,
+            "unit": ingredient.unit
+        }
+        for ingredient in ingredients
+    ]
