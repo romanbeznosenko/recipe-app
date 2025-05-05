@@ -137,3 +137,109 @@ async def get_current_user_recipes(
     recipes = db.query(Recipe).filter(
         Recipe.user_id == current_user.id).offset(skip).limit(limit).all()
     return recipes
+
+# Add these routes to your recipe_router.py file
+
+from typing import List
+from pydantic import BaseModel
+from db.entries.Step import Step
+from db.entries.RecipeIngredient import RecipeIngredient
+from db.entries.Ingredient import Ingredient
+
+# Ingredient Response Schema
+class IngredientResponse(BaseModel):
+    id: int
+    name: str
+    quantity: float
+    unit: str
+    
+    class Config:
+        from_attributes = True
+
+# Step Response Schema
+class StepResponse(BaseModel):
+    id: int
+    order_number: int
+    action_type: str
+    temperature: int
+    speed: int
+    duration: int
+    description: str
+    
+    class Config:
+        from_attributes = True
+
+@router.get("/{recipe_id}/ingredients", response_model=List[IngredientResponse])
+def get_recipe_ingredients(recipe_id: int, db: Session = Depends(get_db)):
+    """
+    Get all ingredients for a specific recipe
+    
+    Args:
+        recipe_id: Recipe ID
+        db: Database session
+        
+    Returns:
+        List of ingredients with quantities and units
+    
+    Raises:
+        HTTPException: If recipe not found
+    """
+    # Check if recipe exists
+    recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()
+    if not recipe:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Recipe not found"
+        )
+    
+    # Join RecipeIngredient with Ingredient to get ingredient details
+    recipe_ingredients = db.query(
+            RecipeIngredient.quantity,
+            Ingredient.id,
+            Ingredient.name,
+            Ingredient.unit
+        ).join(
+            Ingredient, RecipeIngredient.ingredient_id == Ingredient.id
+        ).filter(
+            RecipeIngredient.recipe_id == recipe_id
+        ).all()
+    
+    # Format the response
+    result = []
+    for ri in recipe_ingredients:
+        result.append({
+            "id": ri.id,
+            "name": ri.name,
+            "quantity": ri.quantity,
+            "unit": ri.unit
+        })
+    
+    return result
+
+@router.get("/{recipe_id}/steps", response_model=List[StepResponse])
+def get_recipe_steps(recipe_id: int, db: Session = Depends(get_db)):
+    """
+    Get all steps for a specific recipe
+    
+    Args:
+        recipe_id: Recipe ID
+        db: Database session
+        
+    Returns:
+        List of recipe steps in order
+    
+    Raises:
+        HTTPException: If recipe not found
+    """
+    # Check if recipe exists
+    recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()
+    if not recipe:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Recipe not found"
+        )
+    
+    # Get steps in order
+    steps = db.query(Step).filter(Step.recipe_id == recipe_id).order_by(Step.order_number).all()
+    
+    return steps

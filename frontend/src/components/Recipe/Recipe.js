@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Step from "../Step/Step";
+import { getCompleteRecipe, getMockRecipe } from "../../services/recipeDetailService";
 import "./Recipe.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 
@@ -8,74 +9,61 @@ const Recipe = ({ recipeId }) => {
         title: "Loading...",
         imgUrl: "",
         description: "",
-        yield: "",
+        servings: "",
+        preparation_time: 0,
+        cooking_time: 0,
         ingredients: [],
         steps: []
     });
     
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
     
     useEffect(() => {
-        const fetchRecipe = async () => {
+        const fetchRecipeData = async () => {
+            if (!recipeId) return;
+            
             try {
-                // You would replace this with your actual API call
-                // For example: const response = await fetch(`/api/recipes/${recipeId}`);
+                setLoading(true);
+                setError("");
                 
-                // Simulating API response for demo purposes
-                // In a real application, this would be fetched from your backend
-                setTimeout(() => {
-                    const recipeData = {
-                        title: `Recipe #${recipeId}`,
-                        imgUrl: "https://www.forksoverknives.com/uploads/lemon-hummus-pasta-wordpress.jpg?auto=webp",
-                        description: "Hummus, with its nutty and garlicky flavor, makes a fantastic dip, spread or even a salad dressing, but it can also be a great base for a pasta sauce. A little garlic and shallot sizzled in olive oil, along with fresh lemon juice and zest, help amp up premade hummus. With a little water, the hummus thins out enough to become a creamy sauce to fully coat noodles. You can add chickpeas, fresh herbs, za'atar or almost any roasted or fresh vegetable to this pasta and it will feel like your own.",
-                        yield: "4 servings",
-                        ingredients: [
-                            "Salt",
-                            "12 ounces spaghetti",
-                            "1/4 cup olive oil"
-                        ],
-                        steps: [
-                            {
-                                stepNumber: "Step 1",
-                                description: "Pour 2 liters of water into the DreamFoodX bowl, add salt, bring to a boil. Add the pasta and cook until tender. Drain, reserving 1 cup of pasta water.",
-                                temperature: "100",
-                                speed: "2",
-                                duration: "10"
-                            },
-                            {
-                                stepNumber: "Step 2",
-                                description: "Heat olive oil in a pan, add garlic and shallots, and sauté until fragrant. Add hummus and thin with pasta water to create the sauce.",
-                                temperature: "90",
-                                speed: "1",
-                                duration: "15"
-                            },
-                            {
-                                stepNumber: "Step 3",
-                                description: "Combine the cooked pasta with the hummus sauce. Add any desired herbs or veggies and mix well.",
-                                temperature: "20",
-                                speed: "0",
-                                duration: "5"
-                            }
-                        ]
-                    };
-                    
-                    setRecipe(recipeData);
-                    setLoading(false);
-                }, 500);
+                // Use the service to fetch complete recipe data
+                const completeRecipe = await getCompleteRecipe(recipeId);
+                setRecipe(completeRecipe);
+                setLoading(false);
+            } catch (err) {
+                console.error("Error fetching recipe:", err);
+                setError(err.message || "Failed to load recipe data");
                 
-            } catch (error) {
-                console.error("Error fetching recipe:", error);
+                // Fallback to mock data in development
+                if (process.env.NODE_ENV === 'development') {
+                    console.log("Using fallback mock data");
+                    const mockRecipe = getMockRecipe(recipeId);
+                    setRecipe(mockRecipe);
+                }
+                
                 setLoading(false);
             }
         };
         
         if (recipeId) {
-            fetchRecipe();
+            fetchRecipeData();
         }
     }, [recipeId]);
     
     if (loading) {
         return <div className="loading">Loading recipe...</div>;
+    }
+    
+    if (error && recipe.title === "Loading...") {
+        return (
+            <div className="error-container">
+                <div className="error-message">{error}</div>
+                <button className="btn btn-primary" onClick={() => window.history.back()}>
+                    Go Back
+                </button>
+            </div>
+        );
     }
     
     return (
@@ -90,27 +78,41 @@ const Recipe = ({ recipeId }) => {
                 <div className="col-md-6">
                     <div className="recipe-right-column">
                         <p>{recipe.description}</p>
+                        <div className="recipe-meta">
+                            <span><strong>Servings:</strong> {recipe.servings || recipe.yield}</span>
+                            <span><strong>Preparation Time:</strong> {recipe.preparation_time} minutes</span>
+                            <span><strong>Cooking Time:</strong> {recipe.cooking_time} minutes</span>
+                        </div>
                         <div className="row">
                             <div className="col-md-6">
-                                <div className="recipe-ingridients">    
-                                    <span><strong>Yield:</strong> {recipe.yield}</span>
-                                    {recipe.ingredients.map((ingredient, index) => (
-                                        <span key={index}>{ingredient}</span>
-                                    ))}
+                                <div className="recipe-ingridients">
+                                    <h3>Ingredients</h3>
+                                    {recipe.ingredients.length > 0 ? (
+                                        recipe.ingredients.map((ingredient, index) => (
+                                            <span key={index}>{ingredient}</span>
+                                        ))
+                                    ) : (
+                                        <span>No ingredients available</span>
+                                    )}
                                 </div>
                             </div>
                             <div className="col-md-6">
                                 <div className="recipe-preparation">
-                                    {recipe.steps.map((step, index) => (
-                                        <Step 
-                                            key={index}
-                                            stepNumber={step.stepNumber} 
-                                            description={step.description}
-                                            temperature={step.temperature}
-                                            speed={step.speed}
-                                            duration={step.duration}
-                                        />
-                                    ))}
+                                    <h3>Instructions</h3>
+                                    {recipe.steps.length > 0 ? (
+                                        recipe.steps.map((step, index) => (
+                                            <Step 
+                                                key={index}
+                                                stepNumber={step.stepNumber} 
+                                                description={step.description}
+                                                temperature={step.temperature}
+                                                speed={step.speed}
+                                                duration={step.duration}
+                                            />
+                                        ))
+                                    ) : (
+                                        <span>No instructions available</span>
+                                    )}
                                 </div>
                             </div>
                         </div>
