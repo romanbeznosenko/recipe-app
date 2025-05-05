@@ -1,11 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List, Annotated
+from typing import List
 from pydantic import BaseModel, Field
 
 from db.base import get_db
 from db.entries.Recipe import Recipe
 from db.entries.User import User
+from db.entries.Step import Step
+from db.entries.RecipeIngredient import RecipeIngredient
+from db.entries.Ingredient import Ingredient
+from routers.auth_router import get_current_user
 
 router = APIRouter(
     prefix="/recipes",
@@ -13,6 +17,7 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
+# ========== Pydantic Models ==========
 
 class RecipeBase(BaseModel):
     """Base Recipe schema with shared attributes"""
@@ -38,8 +43,87 @@ class RecipeResponse(RecipeBase):
         from_attributes = True
 
 
+class IngredientResponse(BaseModel):
+    """Schema for returning recipe ingredients"""
+    id: int
+    name: str
+    quantity: float
+    unit: str
+    
+    class Config:
+        from_attributes = True
+
+
+class StepResponse(BaseModel):
+    """Schema for returning recipe steps"""
+    id: int
+    order_number: int
+    action_type: str
+    temperature: int
+    speed: int
+    duration: int
+    description: str
+    
+    class Config:
+        from_attributes = True
+
+
+# ========== Helper Functions ==========
+
+def get_recipe_or_404(recipe_id: int, db: Session):
+    """
+    Get a recipe by ID or raise a 404 exception
+    
+    Args:
+        recipe_id: Recipe ID
+        db: Database session
+        
+    Returns:
+        Recipe object
+        
+    Raises:
+        HTTPException: If recipe not found
+    """
+    recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()
+    if recipe is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Recipe not found"
+        )
+    return recipe
+
+
+def get_user_or_404(user_id: int, db: Session):
+    """
+    Get a user by ID or raise a 404 exception
+    
+    Args:
+        user_id: User ID
+        db: Database session
+        
+    Returns:
+        User object
+        
+    Raises:
+        HTTPException: If user not found
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    return user
+
+
+# ========== Recipe Routes ==========
+
 @router.get("/", response_model=List[RecipeResponse])
-def get_recipes(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_recipes(
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(get_db)
+):
     """
     Get all public recipes with pagination
 
@@ -51,8 +135,10 @@ def get_recipes(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     Returns:
         List of recipes
     """
-    recipes = db.query(Recipe).filter(Recipe.is_public ==
-                                      True).offset(skip).limit(limit).all()
+    recipes = db.query(Recipe).filter(
+        Recipe.is_public == True
+    ).offset(skip).limit(limit).all()
+    
     return recipes
 
 
@@ -71,11 +157,7 @@ def get_recipe(recipe_id: int, db: Session = Depends(get_db)):
     Raises:
         HTTPException: If recipe not found
     """
-    recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()
-    if recipe is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Recipe not found")
-    return recipe
+    return get_recipe_or_404(recipe_id, db)
 
 
 @router.get("/user/{user_id}", response_model=List[RecipeResponse])
@@ -101,19 +183,15 @@ async def get_user_recipes(
         HTTPException: If user not found
     """
     # Check if user exists
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-
+    get_user_or_404(user_id, db)
+    
     # Get user's recipes
     recipes = db.query(Recipe).filter(
-        Recipe.user_id == user_id).offset(skip).limit(limit).all()
+        Recipe.user_id == user_id
+    ).offset(skip).limit(limit).all()
+    
     return recipes
 
-from routers.auth_router import get_current_user
 
 @router.get("/current/", response_model=List[RecipeResponse])
 async def get_current_user_recipes(
@@ -135,39 +213,11 @@ async def get_current_user_recipes(
         List of user's recipes
     """
     recipes = db.query(Recipe).filter(
-        Recipe.user_id == current_user.id).offset(skip).limit(limit).all()
+        Recipe.user_id == current_user.id
+    ).offset(skip).limit(limit).all()
+    
     return recipes
 
-# Add these routes to your recipe_router.py file
-
-from typing import List
-from pydantic import BaseModel
-from db.entries.Step import Step
-from db.entries.RecipeIngredient import RecipeIngredient
-from db.entries.Ingredient import Ingredient
-
-# Ingredient Response Schema
-class IngredientResponse(BaseModel):
-    id: int
-    name: str
-    quantity: float
-    unit: str
-    
-    class Config:
-        from_attributes = True
-
-# Step Response Schema
-class StepResponse(BaseModel):
-    id: int
-    order_number: int
-    action_type: str
-    temperature: int
-    speed: int
-    duration: int
-    description: str
-    
-    class Config:
-        from_attributes = True
 
 @router.get("/{recipe_id}/ingredients", response_model=List[IngredientResponse])
 def get_recipe_ingredients(recipe_id: int, db: Session = Depends(get_db)):
@@ -185,24 +235,19 @@ def get_recipe_ingredients(recipe_id: int, db: Session = Depends(get_db)):
         HTTPException: If recipe not found
     """
     # Check if recipe exists
-    recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()
-    if not recipe:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Recipe not found"
-        )
+    get_recipe_or_404(recipe_id, db)
     
     # Join RecipeIngredient with Ingredient to get ingredient details
     recipe_ingredients = db.query(
-            RecipeIngredient.quantity,
-            Ingredient.id,
-            Ingredient.name,
-            Ingredient.unit
-        ).join(
-            Ingredient, RecipeIngredient.ingredient_id == Ingredient.id
-        ).filter(
-            RecipeIngredient.recipe_id == recipe_id
-        ).all()
+        RecipeIngredient.quantity,
+        Ingredient.id,
+        Ingredient.name,
+        Ingredient.unit
+    ).join(
+        Ingredient, RecipeIngredient.ingredient_id == Ingredient.id
+    ).filter(
+        RecipeIngredient.recipe_id == recipe_id
+    ).all()
     
     # Format the response
     result = []
@@ -215,6 +260,7 @@ def get_recipe_ingredients(recipe_id: int, db: Session = Depends(get_db)):
         })
     
     return result
+
 
 @router.get("/{recipe_id}/steps", response_model=List[StepResponse])
 def get_recipe_steps(recipe_id: int, db: Session = Depends(get_db)):
@@ -232,14 +278,13 @@ def get_recipe_steps(recipe_id: int, db: Session = Depends(get_db)):
         HTTPException: If recipe not found
     """
     # Check if recipe exists
-    recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()
-    if not recipe:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Recipe not found"
-        )
+    get_recipe_or_404(recipe_id, db)
     
     # Get steps in order
-    steps = db.query(Step).filter(Step.recipe_id == recipe_id).order_by(Step.order_number).all()
+    steps = db.query(Step).filter(
+        Step.recipe_id == recipe_id
+    ).order_by(
+        Step.order_number
+    ).all()
     
     return steps
