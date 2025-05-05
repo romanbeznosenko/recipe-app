@@ -9,9 +9,11 @@ from db.entries.Ingredient import Ingredient
 from db.entries.Step import Step
 from db.entries.RecipeIngredient import RecipeIngredient
 
+
 def get_utc_now():
     """Get current UTC time"""
     return datetime.datetime.now(timezone.utc)
+
 
 def reset_database():
     """Drop all tables and recreate them"""
@@ -20,9 +22,11 @@ def reset_database():
     print("Creating all tables...")
     Base.metadata.create_all(engine)
 
+
 def create_tables():
     """Create all tables if they don't exist"""
     Base.metadata.create_all(engine)
+
 
 def get_db():
     """Get database session"""
@@ -32,37 +36,38 @@ def get_db():
     finally:
         db.close()
 
+
 def seed_database():
     """
     Seed the database with initial test data.
     """
     session = SessionLocal()
-    
+
     try:
         print("Seeding database...")
-        
+
         print("Creating users...")
         admin = User(
-            username="admin", 
+            username="admin",
             email="admin@example.com"
         )
         admin.password = "Admin123!"  # Will be automatically hashed
-        
+
         chef_john = User(
-            username="chef_john", 
+            username="chef_john",
             email="chef@example.com"
         )
         chef_john.password = "ChefJohn123!"
-        
+
         home_cook = User(
-            username="home_cook", 
+            username="home_cook",
             email="cook@example.com"
         )
         home_cook.password = "HomeCook123!"
-        
+
         session.add_all([admin, chef_john, home_cook])
         session.flush()  # Flush to get IDs
-        
+
         print("Creating ingredients...")
         ingredients = [
             Ingredient(name="Salt", unit="g"),
@@ -83,7 +88,7 @@ def seed_database():
         ]
         session.add_all(ingredients)
         session.flush()
-        
+
         print("Creating recipes...")
         pasta_recipe = Recipe(
             title="Classic Spaghetti Carbonara",
@@ -94,7 +99,7 @@ def seed_database():
             servings=4,
             user_id=chef_john.id
         )
-        
+
         chicken_recipe = Recipe(
             title="Garlic Butter Chicken",
             description="Juicy chicken breasts cooked in a garlic butter sauce.",
@@ -104,7 +109,7 @@ def seed_database():
             servings=2,
             user_id=home_cook.id
         )
-        
+
         cookie_recipe = Recipe(
             title="Chocolate Chip Cookies",
             description="Classic homemade chocolate chip cookies that are soft and chewy.",
@@ -114,10 +119,10 @@ def seed_database():
             servings=24,
             user_id=admin.id
         )
-        
+
         session.add_all([pasta_recipe, chicken_recipe, cookie_recipe])
         session.flush()
-        
+
         print("Creating recipe steps...")
         pasta_steps = [
             Step(
@@ -157,7 +162,7 @@ def seed_database():
                 description="Mix the egg mixture with the hot pasta to create a creamy sauce."
             )
         ]
-        
+
         chicken_steps = [
             Step(
                 recipe_id=chicken_recipe.id,
@@ -187,7 +192,7 @@ def seed_database():
                 description="Add minced garlic and cook until fragrant."
             )
         ]
-        
+
         cookie_steps = [
             Step(
                 recipe_id=cookie_recipe.id,
@@ -226,47 +231,63 @@ def seed_database():
                 description="Bake in preheated oven until edges are golden brown."
             )
         ]
-        
+
         all_steps = pasta_steps + chicken_steps + cookie_steps
         session.add_all(all_steps)
-        session.flush() 
-        
+        session.flush()
+
         print("Creating recipe ingredients...")
         pasta_ingredients = [
-            RecipeIngredient(recipe_id=pasta_recipe.id, ingredient_id=ingredients[7].id, quantity=400, step_id=pasta_steps[1].id),  # Pasta
-            RecipeIngredient(recipe_id=pasta_recipe.id, ingredient_id=ingredients[12].id, quantity=4, step_id=pasta_steps[2].id),    # Eggs
-            RecipeIngredient(recipe_id=pasta_recipe.id, ingredient_id=ingredients[8].id, quantity=100, step_id=pasta_steps[2].id),  # Parmesan
-            RecipeIngredient(recipe_id=pasta_recipe.id, ingredient_id=ingredients[0].id, quantity=5, step_id=pasta_steps[0].id),    # Salt
-            RecipeIngredient(recipe_id=pasta_recipe.id, ingredient_id=ingredients[1].id, quantity=10, step_id=pasta_steps[3].id),   # Pepper
+            RecipeIngredient(recipe_id=pasta_recipe.id,
+                             ingredient_id=ingredients[7].id, quantity=400, step_id=pasta_steps[1].id),  # Pasta
+            RecipeIngredient(recipe_id=pasta_recipe.id,
+                             ingredient_id=ingredients[12].id, quantity=4, step_id=pasta_steps[2].id),    # Eggs
+            RecipeIngredient(recipe_id=pasta_recipe.id,
+                             ingredient_id=ingredients[8].id, quantity=100, step_id=pasta_steps[2].id),  # Parmesan
+            RecipeIngredient(recipe_id=pasta_recipe.id,
+                             ingredient_id=ingredients[0].id, quantity=5, step_id=pasta_steps[0].id),    # Salt
+            RecipeIngredient(recipe_id=pasta_recipe.id,
+                             ingredient_id=ingredients[1].id, quantity=10, step_id=pasta_steps[3].id),   # Pepper
         ]
-        
+
         chicken_ingredients = [
-            RecipeIngredient(recipe_id=chicken_recipe.id, ingredient_id=ingredients[3].id, quantity=500, step_id=chicken_steps[0].id),  # Chicken
-            RecipeIngredient(recipe_id=chicken_recipe.id, ingredient_id=ingredients[13].id, quantity=50, step_id=chicken_steps[1].id),  # Butter
-            RecipeIngredient(recipe_id=chicken_recipe.id, ingredient_id=ingredients[4].id, quantity=3, step_id=chicken_steps[2].id),    # Garlic
-            RecipeIngredient(recipe_id=chicken_recipe.id, ingredient_id=ingredients[0].id, quantity=5, step_id=chicken_steps[0].id),    # Salt
-            RecipeIngredient(recipe_id=chicken_recipe.id, ingredient_id=ingredients[1].id, quantity=3, step_id=chicken_steps[0].id),    # Pepper
+            RecipeIngredient(recipe_id=chicken_recipe.id,
+                             ingredient_id=ingredients[3].id, quantity=500, step_id=chicken_steps[0].id),  # Chicken
+            RecipeIngredient(recipe_id=chicken_recipe.id,
+                             ingredient_id=ingredients[13].id, quantity=50, step_id=chicken_steps[1].id),  # Butter
+            RecipeIngredient(recipe_id=chicken_recipe.id,
+                             ingredient_id=ingredients[4].id, quantity=3, step_id=chicken_steps[2].id),    # Garlic
+            RecipeIngredient(recipe_id=chicken_recipe.id,
+                             ingredient_id=ingredients[0].id, quantity=5, step_id=chicken_steps[0].id),    # Salt
+            RecipeIngredient(recipe_id=chicken_recipe.id,
+                             ingredient_id=ingredients[1].id, quantity=3, step_id=chicken_steps[0].id),    # Pepper
         ]
-        
+
         cookie_ingredients = [
-            RecipeIngredient(recipe_id=cookie_recipe.id, ingredient_id=ingredients[13].id, quantity=230, step_id=cookie_steps[0].id),  # Butter
-            RecipeIngredient(recipe_id=cookie_recipe.id, ingredient_id=ingredients[11].id, quantity=200, step_id=cookie_steps[0].id),  # Sugar
-            RecipeIngredient(recipe_id=cookie_recipe.id, ingredient_id=ingredients[12].id, quantity=2, step_id=cookie_steps[1].id),    # Eggs
-            RecipeIngredient(recipe_id=cookie_recipe.id, ingredient_id=ingredients[10].id, quantity=350, step_id=cookie_steps[2].id),  # Flour
+            RecipeIngredient(recipe_id=cookie_recipe.id,
+                             ingredient_id=ingredients[13].id, quantity=230, step_id=cookie_steps[0].id),  # Butter
+            RecipeIngredient(recipe_id=cookie_recipe.id,
+                             ingredient_id=ingredients[11].id, quantity=200, step_id=cookie_steps[0].id),  # Sugar
+            RecipeIngredient(recipe_id=cookie_recipe.id,
+                             ingredient_id=ingredients[12].id, quantity=2, step_id=cookie_steps[1].id),    # Eggs
+            RecipeIngredient(recipe_id=cookie_recipe.id,
+                             ingredient_id=ingredients[10].id, quantity=350, step_id=cookie_steps[2].id),  # Flour
         ]
-        
-        all_recipe_ingredients = pasta_ingredients + chicken_ingredients + cookie_ingredients
+
+        all_recipe_ingredients = pasta_ingredients + \
+            chicken_ingredients + cookie_ingredients
         session.add_all(all_recipe_ingredients)
-        
+
         session.commit()
         print("Database seeding completed successfully!")
-        
+
     except Exception as e:
         session.rollback()
         print(f"Error seeding database: {e}")
         raise
     finally:
         session.close()
+
 
 if __name__ == "__main__":
     reset_database()
