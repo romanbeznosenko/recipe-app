@@ -1,5 +1,6 @@
 from routers.auth_router import router as auth_router
 from routers.user_router import router as user_router
+from routers.recipe_router import router as recipe_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -24,6 +25,7 @@ app.add_middleware(
 
 app.include_router(user_router)
 app.include_router(auth_router)
+app.include_router(recipe_router)
 
 
 @app.get("/")
