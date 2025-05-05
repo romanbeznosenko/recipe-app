@@ -2,30 +2,23 @@
     padding: 20px;
     background-color: #F5F3E8;
     min-height: calc(100vh - 60px);
+    position: relative;
 }
 
 .back-button {
     margin-bottom: 20px;
 }
 
-.recipe-left-column {
-    margin-bottom: 20px;
-}
-
-.recipe-title-row {
+/* Add this new section for the top actions area */
+.recipe-top-actions {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
 }
 
-.recipe-left-column h1 {
-    font-size: 28px;
-    margin-bottom: 15px;
-    color: #333;
-    border-bottom: 2px solid #BCAE1C;
-    padding-bottom: 10px;
-    margin-right: 10px;
+.recipe-top-actions .back-button {
+    margin-bottom: 0;
 }
 
 .edit-recipe-btn {
@@ -39,6 +32,23 @@
 .edit-recipe-btn:hover {
     background-color: #BCAE1C;
     color: white;
+}
+
+.recipe-left-column {
+    margin-bottom: 20px;
+}
+
+/* Modify this to only have the title, not the button */
+.recipe-title-row {
+    margin-bottom: 15px;
+}
+
+.recipe-left-column h1 {
+    font-size: 28px;
+    margin-bottom: 15px;
+    color: #333;
+    border-bottom: 2px solid #BCAE1C;
+    padding-bottom: 10px;
 }
 
 .recipe-left-column img {
@@ -135,18 +145,10 @@
 }
 
 @media (max-width: 768px) {
-    .recipe-title-row {
+    .recipe-top-actions {
         flex-direction: column;
         align-items: flex-start;
-    }
-
-    .recipe-left-column h1 {
-        margin-right: 0;
-        margin-bottom: 10px;
-    }
-
-    .edit-recipe-btn {
-        margin-bottom: 15px;
+        gap: 10px;
     }
 
     .recipe-meta {

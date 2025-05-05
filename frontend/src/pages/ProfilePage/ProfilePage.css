@@ -49,6 +49,12 @@
   color: #333;
 }
 
+.user-email {
+  color: #666;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+}
+
 .user-stats {
   display: flex;
   justify-content: space-around;
@@ -132,6 +138,39 @@
   width: 100%;
 }
 
+.recipe-item {
+  position: relative;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.recipe-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+}
+
+.recipe-actions .btn {
+  background-color: white;
+  border-color: #BCAE1C;
+  color: #BCAE1C;
+  font-size: 0.85rem;
+  padding: 5px 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.recipe-actions .btn:hover {
+  background-color: #BCAE1C;
+  color: white;
+}
+
+/* Make sure RecipeCard doesn't hide the edit button */
+.recipe-item>div {
+  width: 100%;
+}
+
 .no-recipes {
   grid-column: 1 / -1;
   text-align: center;
@@ -185,29 +224,11 @@
     width: 100%;
     position: static;
   }
-}
 
-/* Add these styles to your ProfilePage.css file */
-
-.recipe-item {
-  position: relative;
-  margin-bottom: 20px;
-}
-
-.recipe-actions {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 10;
-}
-
-.recipe-actions .btn {
-  background-color: white;
-  border-color: #BCAE1C;
-  color: #BCAE1C;
-}
-
-.recipe-actions .btn:hover {
-  background-color: #BCAE1C;
-  color: white;
+  .recipe-actions {
+    position: static;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+  }
 }

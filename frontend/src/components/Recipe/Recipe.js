@@ -193,23 +193,26 @@ const Recipe = ({ recipeId }) => {
 
     return (
         <div className="recipe-container">
-            <button className="back-button btn btn-outline-secondary mb-3" onClick={handleBackClick}>
-                ← Back
-            </button>
+            {/* New top actions section with back and edit buttons */}
+            <div className="recipe-top-actions">
+                <button className="back-button btn btn-outline-secondary" onClick={handleBackClick}>
+                    ← Back
+                </button>
+                {isOwner && (
+                    <button
+                        className="btn btn-outline-primary edit-recipe-btn"
+                        onClick={() => navigate(`/edit-recipe/${recipeId}`)}
+                    >
+                        Edit Recipe
+                    </button>
+                )}
+            </div>
 
             <div className="row">
                 <div className="col-md-6 mb-4">
                     <div className="recipe-left-column">
                         <div className="recipe-title-row">
                             <h1>{recipe.title}</h1>
-                            {isOwner && (
-                                <button
-                                    className="btn btn-outline-primary edit-recipe-btn"
-                                    onClick={() => navigate(`/edit-recipe/${recipeId}`)}
-                                >
-                                    Edit Recipe
-                                </button>
-                            )}
                         </div>
                         <img src={recipe.imgUrl} title={recipe.title} alt={recipe.title} />
                     </div>

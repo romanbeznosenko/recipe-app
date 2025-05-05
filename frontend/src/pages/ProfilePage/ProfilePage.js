@@ -150,14 +150,6 @@ const ProfilePage = () => {
                                             cookingTime={recipe.cooking_time || recipe.cookingTime}
                                             imageUrl={recipe.imageUrl}
                                         />
-                                        <div className="recipe-actions">
-                                            <button
-                                                className="btn btn-outline-primary btn-sm"
-                                                onClick={() => navigate(`/edit-recipe/${recipe.id}`)}
-                                            >
-                                                Edit Recipe
-                                            </button>
-                                        </div>
                                     </div>
                                 ))
                             ) : (
