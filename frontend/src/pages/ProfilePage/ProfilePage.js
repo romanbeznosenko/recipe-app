@@ -141,15 +141,24 @@ const ProfilePage = () => {
                         <div className="recipe-list">
                             {recipes.length > 0 ? (
                                 recipes.map((recipe) => (
-                                    <RecipeCard
-                                        key={recipe.id}
-                                        id={recipe.id}
-                                        title={recipe.title}
-                                        description={recipe.description}
-                                        preparationTime={recipe.preparation_time || recipe.preparationTime}
-                                        cookingTime={recipe.cooking_time || recipe.cookingTime}
-                                        imageUrl={recipe.imageUrl}
-                                    />
+                                    <div key={recipe.id} className="recipe-item">
+                                        <RecipeCard
+                                            id={recipe.id}
+                                            title={recipe.title}
+                                            description={recipe.description}
+                                            preparationTime={recipe.preparation_time || recipe.preparationTime}
+                                            cookingTime={recipe.cooking_time || recipe.cookingTime}
+                                            imageUrl={recipe.imageUrl}
+                                        />
+                                        <div className="recipe-actions">
+                                            <button
+                                                className="btn btn-outline-primary btn-sm"
+                                                onClick={() => navigate(`/edit-recipe/${recipe.id}`)}
+                                            >
+                                                Edit Recipe
+                                            </button>
+                                        </div>
+                                    </div>
                                 ))
                             ) : (
                                 <p className="no-recipes">You haven't created any recipes yet.</p>

@@ -69,8 +69,6 @@ class StepResponse(BaseModel):
         from_attributes = True
 
 
-# Update the model definitions in recipe_router.py
-
 class StepCreate(BaseModel):
     """Schema for creating a recipe step"""
     order_number: int = Field(..., ge=1, example=1)
@@ -134,6 +132,18 @@ class CompleteRecipeCreate(BaseModel):
                 ]
             }
         }
+
+
+class RecipeUpdate(RecipeBase):
+    """Schema for updating a recipe"""
+    pass
+
+
+class CompleteRecipeUpdate(BaseModel):
+    """Schema for updating a complete recipe with steps and ingredients"""
+    recipe: RecipeUpdate
+    steps: List[StepCreate]
+    ingredients: List[IngredientCreate]
 
 
 # ========== Helper Functions ==========
@@ -506,3 +516,217 @@ async def get_available_ingredients(
         }
         for ingredient in ingredients
     ]
+
+
+def check_recipe_ownership(recipe_id: int, user_id: int, db: Session):
+    """
+    Check if the user owns the recipe
+
+    Args:
+        recipe_id: Recipe ID
+        user_id: User ID
+        db: Database session
+
+    Returns:
+        Recipe object if user owns it
+
+    Raises:
+        HTTPException: If recipe not found or user does not own it
+    """
+    recipe = db.query(Recipe).filter(Recipe.id == recipe_id).first()
+
+    if not recipe:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Recipe not found"
+        )
+
+    if recipe.user_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to modify this recipe"
+        )
+
+    return recipe
+
+
+@router.put("/{recipe_id}", response_model=RecipeResponse)
+async def update_recipe(
+    recipe_id: int,
+    recipe_data: RecipeUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Update a recipe
+
+    Args:
+        recipe_id: Recipe ID
+        recipe_data: Updated recipe data
+        current_user: Currently authenticated user
+        db: Database session
+
+    Returns:
+        Updated recipe
+    """
+    # Check ownership
+    db_recipe = check_recipe_ownership(recipe_id, current_user.id, db)
+
+    # Update recipe fields
+    for key, value in recipe_data.dict().items():
+        setattr(db_recipe, key, value)
+
+    db.commit()
+    db.refresh(db_recipe)
+
+    return db_recipe
+
+
+@router.put("/{recipe_id}/complete", response_model=RecipeResponse)
+async def update_complete_recipe(
+    recipe_id: int,
+    recipe_data: CompleteRecipeUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Update a complete recipe with steps and ingredients
+    
+    Args:
+        recipe_id: Recipe ID
+        recipe_data: Updated recipe data with steps and ingredients
+        current_user: Currently authenticated user
+        db: Database session
+        
+    Returns:
+        Updated recipe
+    """
+    try:
+        # Check ownership
+        db_recipe = check_recipe_ownership(recipe_id, current_user.id, db)
+        
+        # 1. Update recipe fields
+        for key, value in recipe_data.recipe.dict().items():
+            setattr(db_recipe, key, value)
+        
+        # 2. Delete existing recipe ingredients first (to resolve the foreign key constraint)
+        db.query(RecipeIngredient).filter(RecipeIngredient.recipe_id == recipe_id).delete()
+        
+        # 3. Now it's safe to delete steps
+        db.query(Step).filter(Step.recipe_id == recipe_id).delete()
+        
+        # Flush to ensure all deletions are processed
+        db.flush()
+        
+        # 4. Create new steps first and save their ids
+        db_steps = []
+        step_id_map = {}  # Map to keep track of step order_number to new id
+        
+        for step_data in recipe_data.steps:
+            step_dict = step_data.dict()
+            # Ensure all fields are the correct type
+            order_number = int(step_dict["order_number"])
+            step_dict["order_number"] = order_number
+            step_dict["temperature"] = int(step_dict["temperature"])
+            step_dict["speed"] = int(step_dict["speed"])
+            step_dict["duration"] = int(step_dict["duration"])
+            
+            # Create new step
+            db_step = Step(
+                **step_dict,
+                recipe_id=recipe_id
+            )
+            db.add(db_step)
+            db_steps.append(db_step)
+        
+        # Flush to get the new step IDs
+        db.flush()
+        
+        # Create a map of order_number to new step ID
+        for step in db_steps:
+            step_id_map[step.order_number] = step.id
+        
+        # 5. Create new ingredients with new step references
+        for i, ingredient_data in enumerate(recipe_data.ingredients):
+            ing_dict = ingredient_data.dict()
+            
+            # Ensure all fields are the correct type
+            ing_dict["ingredient_id"] = int(ing_dict["ingredient_id"])
+            ing_dict["quantity"] = float(ing_dict["quantity"])
+            
+            # Determine which step this ingredient should be linked to
+            step_id = None
+            
+            # If a specific step is provided and exists in our new steps, use that
+            if i < len(db_steps):
+                # Use the step at the same index
+                step_id = db_steps[i].id
+            
+            # Create the ingredient with the proper step reference
+            db_ingredient = RecipeIngredient(
+                recipe_id=recipe_id,
+                ingredient_id=ing_dict["ingredient_id"],
+                quantity=ing_dict["quantity"],
+                step_id=step_id
+            )
+            db.add(db_ingredient)
+        
+        # Commit all changes
+        db.commit()
+        db.refresh(db_recipe)
+        
+        return db_recipe
+    
+    except Exception as e:
+        db.rollback()
+        print(f"Error updating recipe: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error updating recipe: {str(e)}"
+        )
+
+@router.get("/{recipe_id}/edit", response_model=CompleteRecipeUpdate)
+async def get_recipe_for_edit(
+    recipe_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get a recipe with its steps and ingredients for editing
+
+    Args:
+        recipe_id: Recipe ID
+        current_user: Currently authenticated user
+        db: Database session
+
+    Returns:
+        Complete recipe data for editing
+    """
+    # Check ownership
+    db_recipe = check_recipe_ownership(recipe_id, current_user.id, db)
+
+    # Get steps
+    steps = db.query(Step).filter(Step.recipe_id ==
+                                  recipe_id).order_by(Step.order_number).all()
+
+    # Get ingredients
+    recipe_ingredients = db.query(RecipeIngredient).filter(
+        RecipeIngredient.recipe_id == recipe_id
+    ).all()
+
+    # Format for response
+    ingredients = []
+    for ri in recipe_ingredients:
+        ingredients.append({
+            "ingredient_id": ri.ingredient_id,
+            "quantity": ri.quantity,
+            "step_id": ri.step_id
+        })
+
+    return {
+        "recipe": db_recipe,
+        "steps": steps,
+        "ingredients": ingredients
+    }

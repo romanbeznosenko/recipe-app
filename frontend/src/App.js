@@ -5,6 +5,7 @@ import SignUpPage from "./pages/SignUpPage/SignUpPage";
 import ProfilePage from "./pages/ProfilePage/ProfilePage";
 import RecipePage from "./pages/RecipePage/RecipePage";
 import CreateRecipePage from "./pages/CreateRecipePage/CreateRecipePage";
+import EditRecipePage from "./pages/EditRecipePage/EditRecipePage";
 import "./App.css";
 
 // Protected route component
@@ -40,6 +41,14 @@ function App() {
           element={
             <ProtectedRoute>
               <CreateRecipePage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/edit-recipe/:recipeId" 
+          element={
+            <ProtectedRoute>
+              <EditRecipePage />
             </ProtectedRoute>
           } 
         />
