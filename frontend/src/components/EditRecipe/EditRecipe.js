@@ -42,7 +42,7 @@ const EditRecipe = () => {
       try {
         setLoading(true);
         const token = localStorage.getItem("token");
-        
+
         // Fetch recipe data for editing
         const recipeResponse = await fetch(
           `http://localhost:8000/recipes/${recipeId}/edit`,
@@ -64,7 +64,7 @@ const EditRecipe = () => {
         }
 
         const recipeData = await recipeResponse.json();
-        
+
         // Fetch available ingredients
         const ingredientsResponse = await fetch(
           "http://localhost:8000/recipes/ingredients/list",
@@ -80,13 +80,13 @@ const EditRecipe = () => {
         }
 
         const ingredientsData = await ingredientsResponse.json();
-        
+
         // Update state with fetched data
         setRecipe(recipeData.recipe);
         setSteps(recipeData.steps);
         setIngredients(recipeData.ingredients);
         setAvailableIngredients(ingredientsData);
-        
+
         setLoading(false);
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -114,8 +114,8 @@ const EditRecipe = () => {
     const updatedSteps = [...steps];
     updatedSteps[index] = {
       ...updatedSteps[index],
-      [name]: name === "order_number" || name === "temperature" || name === "speed" || name === "duration" 
-        ? parseInt(value, 10) 
+      [name]: name === "order_number" || name === "temperature" || name === "speed" || name === "duration"
+        ? parseInt(value, 10)
         : value,
     };
     setSteps(updatedSteps);
@@ -130,6 +130,38 @@ const EditRecipe = () => {
       [name]: name === "quantity" ? parseFloat(value) : name === "ingredient_id" ? parseInt(value, 10) : value,
     };
     setIngredients(updatedIngredients);
+  };
+
+  // Move step up
+  const moveStepUp = (index) => {
+    if (index === 0) return; // Can't move first step up
+
+    const newSteps = [...steps];
+    // Swap with previous step
+    [newSteps[index - 1], newSteps[index]] = [newSteps[index], newSteps[index - 1]];
+
+    // Update order numbers
+    newSteps.forEach((step, i) => {
+      step.order_number = i + 1;
+    });
+
+    setSteps(newSteps);
+  };
+
+  // Move step down
+  const moveStepDown = (index) => {
+    if (index === steps.length - 1) return; // Can't move last step down
+
+    const newSteps = [...steps];
+    // Swap with next step
+    [newSteps[index], newSteps[index + 1]] = [newSteps[index + 1], newSteps[index]];
+
+    // Update order numbers
+    newSteps.forEach((step, i) => {
+      step.order_number = i + 1;
+    });
+
+    setSteps(newSteps);
   };
 
   // Add new step
@@ -182,18 +214,18 @@ const EditRecipe = () => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       setSubmitting(true);
       setError("");
-      
+
       // Validate inputs
       if (!recipe.title || !recipe.description) {
         setError("Please fill in all required recipe fields");
         setSubmitting(false);
         return;
       }
-      
+
       // Make sure all steps have descriptions
       for (const step of steps) {
         if (!step.description) {
@@ -202,7 +234,7 @@ const EditRecipe = () => {
           return;
         }
       }
-      
+
       // Make sure all ingredients have been selected
       for (const ingredient of ingredients) {
         if (!ingredient.ingredient_id) {
@@ -211,14 +243,14 @@ const EditRecipe = () => {
           return;
         }
       }
-      
+
       // Convert string values to proper numbers
       const formattedIngredients = ingredients.map(ing => ({
         ...ing,
         ingredient_id: parseInt(ing.ingredient_id, 10),
         quantity: parseFloat(ing.quantity)
       }));
-      
+
       const formattedSteps = steps.map(step => ({
         ...step,
         // Remove id if present (we're replacing all steps)
@@ -228,7 +260,7 @@ const EditRecipe = () => {
         speed: parseInt(step.speed, 10),
         duration: parseInt(step.duration, 10)
       }));
-      
+
       // Make sure recipe numeric fields are numbers
       const formattedRecipe = {
         ...recipe,
@@ -236,21 +268,21 @@ const EditRecipe = () => {
         cooking_time: parseInt(recipe.cooking_time, 10),
         servings: parseInt(recipe.servings, 10)
       };
-      
+
       // Prepare data for API
       const recipeData = {
         recipe: formattedRecipe,
         steps: formattedSteps,
         ingredients: formattedIngredients
       };
-      
+
       // Get token for authentication
       const token = localStorage.getItem("token");
       if (!token) {
         navigate("/login");
         return;
       }
-      
+
       // Send data to API
       const response = await fetch(`http://localhost:8000/recipes/${recipeId}/complete`, {
         method: "PUT",
@@ -260,21 +292,21 @@ const EditRecipe = () => {
         },
         body: JSON.stringify(recipeData),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         console.error("API error:", errorData);
         throw new Error(errorData.detail || "Failed to update recipe");
       }
-      
+
       const data = await response.json();
       setSuccess(true);
-      
+
       // Redirect to the updated recipe
       setTimeout(() => {
         navigate(`/recipe/${data.id}`);
       }, 2000);
-      
+
     } catch (err) {
       console.error("Error updating recipe:", err);
       setError(err.message || "Failed to update recipe. Please try again.");
@@ -469,12 +501,42 @@ const EditRecipe = () => {
 
           {/* Steps Section */}
           <div className="card mb-4">
-            <div className="card-header">Steps</div>
+            <div className="card-header">
+              Steps
+              <small className="text-muted ms-2">(Use arrows to reorder)</small>
+            </div>
             <div className="card-body">
               {steps.map((step, index) => (
-                <div key={`step-${index}`} className="step-container mb-4 p-3 border rounded">
-                  <h5>Step {step.order_number}</h5>
-                  
+                <div
+                  key={`step-${index}`}
+                  className="step-container mb-4 p-3 border rounded"
+                >
+                  <div className="d-flex align-items-center justify-content-between mb-3">
+                    <h5 className="mb-0">Step {step.order_number}</h5>
+
+                    {/* Reorder buttons */}
+                    <div className="step-reorder-buttons">
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-secondary me-1"
+                        onClick={() => moveStepUp(index)}
+                        disabled={index === 0}
+                        title="Move step up"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-secondary"
+                        onClick={() => moveStepDown(index)}
+                        disabled={index === steps.length - 1}
+                        title="Move step down"
+                      >
+                        ↓
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="mb-3">
                     <label className="form-label">Description*</label>
                     <textarea
