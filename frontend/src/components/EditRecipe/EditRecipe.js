@@ -4,6 +4,100 @@ import TopNav from "../../components/TopNav/TopNav";
 import "./EditRecipe.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 
+// DreamFoodX Action Types Configuration
+const DREAMFOODX_ACTIONS = {
+  chop: {
+    label: "Chop",
+    icon: "🔪",
+    description: "Chopping ingredients to various sizes",
+    temperature: { show: false, default: 0 },
+    speed: { show: true, default: 5, min: 3, max: 10 },
+    duration: { show: true, default: 1, min: 1, max: 60 },
+    tips: "Speed 5-8 for vegetables, 8-10 for hard ingredients"
+  },
+  mix: {
+    label: "Mix",
+    icon: "🌀",
+    description: "Gentle mixing of ingredients",
+    temperature: { show: false, default: 0 },
+    speed: { show: true, default: 2, min: 1, max: 4 },
+    duration: { show: true, default: 2, min: 1, max: 30 },
+    tips: "Low speeds for delicate ingredients"
+  },
+  cook: {
+    label: "Cook",
+    icon: "🔥",
+    description: "Cooking with stirring",
+    temperature: { show: true, default: 100, min: 37, max: 120 },
+    speed: { show: true, default: 1, min: 1, max: 3 },
+    duration: { show: true, default: 10, min: 2, max: 120 },
+    tips: "Speed 1-2 to avoid splashing"
+  },
+  fry: {
+    label: "Fry",
+    icon: "🍳",
+    description: "Frying with stirring",
+    temperature: { show: true, default: 120, min: 80, max: 160 },
+    speed: { show: true, default: 1, min: 1, max: 2 },
+    duration: { show: true, default: 5, min: 1, max: 60 },
+    tips: "100-120°C for vegetables, 140-160°C for meat"
+  },
+  steam: {
+    label: "Steam",
+    icon: "💨",
+    description: "Steam cooking (Varoma)",
+    temperature: { show: true, default: 100, min: 90, max: 120 },
+    speed: { show: false, default: 0 },
+    duration: { show: true, default: 15, min: 3, max: 120 },
+    tips: "Use Varoma basket or steaming insert"
+  },
+  knead: {
+    label: "Knead",
+    icon: "🍞",
+    description: "Kneading dough",
+    temperature: { show: false, default: 0 },
+    speed: { show: false, default: 0 },
+    duration: { show: true, default: 3, min: 1, max: 15 },
+    tips: "Kneading function works automatically"
+  },
+  emulsify: {
+    label: "Emulsify",
+    icon: "🥄",
+    description: "Creating emulsions and sauces",
+    temperature: { show: false, default: 0 },
+    speed: { show: true, default: 4, min: 3, max: 7 },
+    duration: { show: true, default: 2, min: 1, max: 10 },
+    tips: "Add oil slowly while emulsifying"
+  },
+  blend: {
+    label: "Blend",
+    icon: "🥤",
+    description: "Blending to smooth consistency",
+    temperature: { show: false, default: 0 },
+    speed: { show: true, default: 8, min: 6, max: 10 },
+    duration: { show: true, default: 1, min: 1, max: 5 },
+    tips: "High speeds create smooth consistency"
+  },
+  weigh: {
+    label: "Weigh",
+    icon: "⚖️",
+    description: "Weighing ingredients",
+    temperature: { show: false, default: 0 },
+    speed: { show: false, default: 0 },
+    duration: { show: false, default: 0 },
+    tips: "Use tare function before adding next ingredient"
+  },
+  rest: {
+    label: "Rest",
+    icon: "⏱️",
+    description: "Waiting or resting time",
+    temperature: { show: false, default: 0 },
+    speed: { show: false, default: 0 },
+    duration: { show: true, default: 10, min: 1, max: 180 },
+    tips: "Time for dough to rise or ingredients to cool"
+  }
+};
+
 const EditRecipe = () => {
   const { recipeId } = useParams();
   const navigate = useNavigate();
@@ -28,6 +122,37 @@ const EditRecipe = () => {
 
   // Ingredients state
   const [ingredients, setIngredients] = useState([]);
+
+  // Calculate total cooking time from steps duration
+  const calculateTotalCookingTime = (stepsArray) => {
+    const totalSeconds = stepsArray.reduce((total, step) => {
+      return total + (parseInt(step.duration, 10) || 0);
+    }, 0);
+    return Math.ceil(totalSeconds / 60); // Convert to minutes and round up
+  };
+
+  // Update cooking time whenever steps change
+  useEffect(() => {
+    if (steps.length > 0) {
+      const calculatedTime = calculateTotalCookingTime(steps);
+      setRecipe(prevRecipe => ({
+        ...prevRecipe,
+        cooking_time: calculatedTime
+      }));
+    }
+  }, [steps]);
+  const getActionConfig = (actionType) => {
+    return DREAMFOODX_ACTIONS[actionType] || DREAMFOODX_ACTIONS.mix;
+  };
+
+  // Format duration helper
+  const formatDuration = (seconds) => {
+    if (seconds < 60) return `${seconds} min`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} h ${seconds % 60} min`;
+    const hours = Math.floor((seconds % 3600) / 60);
+    const minutes = seconds % 60;
+    return `${hours}h ${minutes}min`;
+  };
 
   // Fetch recipe data and available ingredients when component mounts
   useEffect(() => {
@@ -112,12 +237,26 @@ const EditRecipe = () => {
   const handleStepChange = (index, e) => {
     const { name, value } = e.target;
     const updatedSteps = [...steps];
-    updatedSteps[index] = {
-      ...updatedSteps[index],
-      [name]: name === "order_number" || name === "temperature" || name === "speed" || name === "duration"
-        ? parseInt(value, 10)
-        : value,
-    };
+
+    // If action type changed, reset parameters to defaults
+    if (name === "action_type") {
+      const config = getActionConfig(value);
+      updatedSteps[index] = {
+        ...updatedSteps[index],
+        action_type: value,
+        temperature: config.temperature.default,
+        speed: config.speed.default,
+        duration: config.duration.default
+      };
+    } else {
+      updatedSteps[index] = {
+        ...updatedSteps[index],
+        [name]: name === "order_number" || name === "temperature" || name === "speed" || name === "duration"
+          ? parseInt(value, 10)
+          : value,
+      };
+    }
+
     setSteps(updatedSteps);
   };
 
@@ -134,13 +273,11 @@ const EditRecipe = () => {
 
   // Move step up
   const moveStepUp = (index) => {
-    if (index === 0) return; // Can't move first step up
+    if (index === 0) return;
 
     const newSteps = [...steps];
-    // Swap with previous step
     [newSteps[index - 1], newSteps[index]] = [newSteps[index], newSteps[index - 1]];
 
-    // Update order numbers
     newSteps.forEach((step, i) => {
       step.order_number = i + 1;
     });
@@ -150,13 +287,11 @@ const EditRecipe = () => {
 
   // Move step down
   const moveStepDown = (index) => {
-    if (index === steps.length - 1) return; // Can't move last step down
+    if (index === steps.length - 1) return;
 
     const newSteps = [...steps];
-    // Swap with next step
     [newSteps[index], newSteps[index + 1]] = [newSteps[index + 1], newSteps[index]];
 
-    // Update order numbers
     newSteps.forEach((step, i) => {
       step.order_number = i + 1;
     });
@@ -170,10 +305,10 @@ const EditRecipe = () => {
       ...steps,
       {
         order_number: steps.length + 1,
-        action_type: "prep",
+        action_type: "mix",
         temperature: 0,
-        speed: 0,
-        duration: 0,
+        speed: 2,
+        duration: 2,
         description: "",
       },
     ]);
@@ -195,7 +330,6 @@ const EditRecipe = () => {
   const removeStep = (index) => {
     if (steps.length > 1) {
       const updatedSteps = steps.filter((_, i) => i !== index);
-      // Update order numbers
       updatedSteps.forEach((step, i) => {
         step.order_number = i + 1;
       });
@@ -253,7 +387,6 @@ const EditRecipe = () => {
 
       const formattedSteps = steps.map(step => ({
         ...step,
-        // Remove id if present (we're replacing all steps)
         ...(step.id && { id: undefined }),
         order_number: parseInt(step.order_number, 10),
         temperature: parseInt(step.temperature, 10),
@@ -329,7 +462,7 @@ const EditRecipe = () => {
     <div>
       <TopNav />
       <div className="edit-recipe-container">
-        <h1 className="text-center mb-4">Edit Recipe</h1>
+        <h1 className="text-center mb-4">Edit DreamFoodX Recipe</h1>
 
         {error && <div className="alert alert-danger">{error}</div>}
         {success && (
@@ -345,7 +478,7 @@ const EditRecipe = () => {
             <div className="card-body">
               <div className="mb-3">
                 <label htmlFor="title" className="form-label">
-                  Title*
+                  Recipe Name*
                 </label>
                 <input
                   type="text"
@@ -374,7 +507,7 @@ const EditRecipe = () => {
               </div>
 
               <div className="row">
-                <div className="col-md-4 mb-3">
+                <div className="col-md-6 mb-3">
                   <label htmlFor="preparation_time" className="form-label">
                     Preparation Time (min)
                   </label>
@@ -389,24 +522,28 @@ const EditRecipe = () => {
                   />
                 </div>
 
-                <div className="col-md-4 mb-3">
+                <div className="col-md-6 mb-3">
                   <label htmlFor="cooking_time" className="form-label">
-                    Cooking Time (min)
+                    Total Cooking Time (auto-calculated)
                   </label>
                   <input
                     type="number"
                     className="form-control"
                     id="cooking_time"
                     name="cooking_time"
-                    min="0"
                     value={recipe.cooking_time}
-                    onChange={handleRecipeChange}
+                    disabled
+                    readOnly
+                    style={{ backgroundColor: '#e9ecef', cursor: 'not-allowed' }}
                   />
+                  <small className="form-text text-muted">
+                    Automatically calculated from step durations: {formatDuration(recipe.cooking_time)}
+                  </small>
                 </div>
 
-                <div className="col-md-4 mb-3">
+                <div className="col-md-6 mb-3">
                   <label htmlFor="servings" className="form-label">
-                    Servings
+                    Number of Servings
                   </label>
                   <input
                     type="number"
@@ -502,117 +639,173 @@ const EditRecipe = () => {
           {/* Steps Section */}
           <div className="card mb-4">
             <div className="card-header">
-              Steps
+              DreamFoodX Steps
               <small className="text-muted ms-2">(Use arrows to reorder)</small>
             </div>
             <div className="card-body">
-              {steps.map((step, index) => (
-                <div
-                  key={`step-${index}`}
-                  className="step-container mb-4 p-3 border rounded"
-                >
-                  <div className="d-flex align-items-center justify-content-between mb-3">
-                    <h5 className="mb-0">Step {step.order_number}</h5>
+              {steps.map((step, index) => {
+                const actionConfig = getActionConfig(step.action_type);
+                return (
+                  <div
+                    key={`step-${index}`}
+                    className="step-container mb-4 p-3 border rounded"
+                  >
+                    <div className="d-flex align-items-center justify-content-between mb-3">
+                      <h5 className="mb-0">
+                        {actionConfig.icon} Step {step.order_number}: {actionConfig.label}
+                      </h5>
 
-                    {/* Reorder buttons */}
-                    <div className="step-reorder-buttons">
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-outline-secondary me-1"
-                        onClick={() => moveStepUp(index)}
-                        disabled={index === 0}
-                        title="Move step up"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-outline-secondary"
-                        onClick={() => moveStepDown(index)}
-                        disabled={index === steps.length - 1}
-                        title="Move step down"
-                      >
-                        ↓
-                      </button>
+                      {/* Reorder buttons */}
+                      <div className="step-reorder-buttons">
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-secondary me-1"
+                          onClick={() => moveStepUp(index)}
+                          disabled={index === 0}
+                          title="Move up"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-secondary"
+                          onClick={() => moveStepDown(index)}
+                          disabled={index === steps.length - 1}
+                          title="Move down"
+                        >
+                          ↓
+                        </button>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="mb-3">
-                    <label className="form-label">Description*</label>
-                    <textarea
-                      className="form-control"
-                      name="description"
-                      rows="2"
-                      value={step.description}
-                      onChange={(e) => handleStepChange(index, e)}
-                      required
-                    ></textarea>
-                  </div>
-
-                  <div className="row mb-3">
-                    <div className="col-md-3">
-                      <label className="form-label">Action Type</label>
+                    <div className="mb-3">
+                      <label className="form-label">DreamFoodX Function</label>
                       <select
                         className="form-select"
                         name="action_type"
                         value={step.action_type}
                         onChange={(e) => handleStepChange(index, e)}
                       >
-                        <option value="prep">Preparation</option>
-                        <option value="cook">Cooking</option>
-                        <option value="mix">Mixing</option>
-                        <option value="rest">Resting</option>
+                        {Object.entries(DREAMFOODX_ACTIONS).map(([key, config]) => (
+                          <option key={key} value={key}>
+                            {config.icon} {config.label}
+                          </option>
+                        ))}
                       </select>
+                      {actionConfig.tips && (
+                        <small className="form-text text-muted">
+                          💡 {actionConfig.tips}
+                        </small>
+                      )}
                     </div>
 
-                    <div className="col-md-3">
-                      <label className="form-label">Temperature (°C)</label>
-                      <input
-                        type="number"
+                    <div className="mb-3">
+                      <label className="form-label">Step Description*</label>
+                      <textarea
                         className="form-control"
-                        name="temperature"
-                        min="0"
-                        value={step.temperature}
+                        name="description"
+                        rows="2"
+                        value={step.description}
                         onChange={(e) => handleStepChange(index, e)}
-                      />
+                        placeholder={`Describe what DreamFoodX should do in this step (${actionConfig.description})`}
+                        required
+                      ></textarea>
                     </div>
 
-                    <div className="col-md-3">
-                      <label className="form-label">Speed (0-10)</label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        name="speed"
-                        min="0"
-                        max="10"
-                        value={step.speed}
-                        onChange={(e) => handleStepChange(index, e)}
-                      />
+                    <div className="row mb-3">
+                      {/* Temperature field - only show if action supports it */}
+                      {actionConfig.temperature.show && (
+                        <div className="col-md-4">
+                          <label className="form-label">
+                            Temperatura (°C)
+                            {actionConfig.temperature.min > 0 && (
+                              <small className="text-muted">
+                                {" "}({actionConfig.temperature.min}-{actionConfig.temperature.max}°C)
+                              </small>
+                            )}
+                          </label>
+                          <input
+                            type="number"
+                            className="form-control"
+                            name="temperature"
+                            min={actionConfig.temperature.min || 0}
+                            max={actionConfig.temperature.max || 200}
+                            value={step.temperature}
+                            onChange={(e) => handleStepChange(index, e)}
+                          />
+                        </div>
+                      )}
+
+                      {/* Speed field - only show if action supports it */}
+                      {actionConfig.speed.show && (
+                        <div className="col-md-4">
+                          <label className="form-label">
+                            Speed (1-10)
+                            {actionConfig.speed.min > 0 && (
+                              <small className="text-muted">
+                                {" "}(recommended: {actionConfig.speed.min}-{actionConfig.speed.max})
+                              </small>
+                            )}
+                          </label>
+                          <input
+                            type="number"
+                            className="form-control"
+                            name="speed"
+                            min={actionConfig.speed.min || 0}
+                            max={actionConfig.speed.max || 10}
+                            value={step.speed}
+                            onChange={(e) => handleStepChange(index, e)}
+                          />
+                        </div>
+                      )}
+
+                      {/* Duration field - only show if action supports it */}
+                      {actionConfig.duration.show && (
+                        <div className="col-md-4">
+                          <label className="form-label">
+                            Time (minutes)
+                            {step.duration > 0 && (
+                              <small className="text-muted">
+                                {" "}({formatDuration(step.duration)})
+                              </small>
+                            )}
+                          </label>
+                          <input
+                            type="number"
+                            className="form-control"
+                            name="duration"
+                            min={actionConfig.duration.min || 0}
+                            max={actionConfig.duration.max || 180}
+                            value={step.duration}
+                            onChange={(e) => handleStepChange(index, e)}
+                          />
+                        </div>
+                      )}
                     </div>
 
-                    <div className="col-md-3">
-                      <label className="form-label">Duration (min)</label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        name="duration"
-                        min="0"
-                        value={step.duration}
-                        onChange={(e) => handleStepChange(index, e)}
-                      />
+                    {/* Action summary */}
+                    <div className="alert alert-light mb-3">
+                      <strong>Summary:</strong>{" "}
+                      {actionConfig.label}
+                      {actionConfig.temperature.show && step.temperature > 0 &&
+                        ` at ${step.temperature}°C`}
+                      {actionConfig.speed.show && step.speed > 0 &&
+                        ` with speed ${step.speed}`}
+                      {actionConfig.duration.show && step.duration > 0 &&
+                        ` for ${formatDuration(step.duration)}`}
                     </div>
+
+                    <button
+                      type="button"
+                      className="btn btn-outline-danger"
+                      onClick={() => removeStep(index)}
+                      disabled={steps.length === 1}
+                    >
+                      Remove Step
+                    </button>
                   </div>
-
-                  <button
-                    type="button"
-                    className="btn btn-outline-danger"
-                    onClick={() => removeStep(index)}
-                    disabled={steps.length === 1}
-                  >
-                    Remove Step
-                  </button>
-                </div>
-              ))}
+                );
+              })}
 
               <button
                 type="button"
