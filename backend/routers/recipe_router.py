@@ -591,37 +591,38 @@ async def update_complete_recipe(
 ):
     """
     Update a complete recipe with steps and ingredients
-    
+
     Args:
         recipe_id: Recipe ID
         recipe_data: Updated recipe data with steps and ingredients
         current_user: Currently authenticated user
         db: Database session
-        
+
     Returns:
         Updated recipe
     """
     try:
         # Check ownership
         db_recipe = check_recipe_ownership(recipe_id, current_user.id, db)
-        
+
         # 1. Update recipe fields
         for key, value in recipe_data.recipe.dict().items():
             setattr(db_recipe, key, value)
-        
+
         # 2. Delete existing recipe ingredients first (to resolve the foreign key constraint)
-        db.query(RecipeIngredient).filter(RecipeIngredient.recipe_id == recipe_id).delete()
-        
+        db.query(RecipeIngredient).filter(
+            RecipeIngredient.recipe_id == recipe_id).delete()
+
         # 3. Now it's safe to delete steps
         db.query(Step).filter(Step.recipe_id == recipe_id).delete()
-        
+
         # Flush to ensure all deletions are processed
         db.flush()
-        
+
         # 4. Create new steps first and save their ids
         db_steps = []
         step_id_map = {}  # Map to keep track of step order_number to new id
-        
+
         for step_data in recipe_data.steps:
             step_dict = step_data.dict()
             # Ensure all fields are the correct type
@@ -630,7 +631,7 @@ async def update_complete_recipe(
             step_dict["temperature"] = int(step_dict["temperature"])
             step_dict["speed"] = int(step_dict["speed"])
             step_dict["duration"] = int(step_dict["duration"])
-            
+
             # Create new step
             db_step = Step(
                 **step_dict,
@@ -638,30 +639,30 @@ async def update_complete_recipe(
             )
             db.add(db_step)
             db_steps.append(db_step)
-        
+
         # Flush to get the new step IDs
         db.flush()
-        
+
         # Create a map of order_number to new step ID
         for step in db_steps:
             step_id_map[step.order_number] = step.id
-        
+
         # 5. Create new ingredients with new step references
         for i, ingredient_data in enumerate(recipe_data.ingredients):
             ing_dict = ingredient_data.dict()
-            
+
             # Ensure all fields are the correct type
             ing_dict["ingredient_id"] = int(ing_dict["ingredient_id"])
             ing_dict["quantity"] = float(ing_dict["quantity"])
-            
+
             # Determine which step this ingredient should be linked to
             step_id = None
-            
+
             # If a specific step is provided and exists in our new steps, use that
             if i < len(db_steps):
                 # Use the step at the same index
                 step_id = db_steps[i].id
-            
+
             # Create the ingredient with the proper step reference
             db_ingredient = RecipeIngredient(
                 recipe_id=recipe_id,
@@ -670,13 +671,13 @@ async def update_complete_recipe(
                 step_id=step_id
             )
             db.add(db_ingredient)
-        
+
         # Commit all changes
         db.commit()
         db.refresh(db_recipe)
-        
+
         return db_recipe
-    
+
     except Exception as e:
         db.rollback()
         print(f"Error updating recipe: {str(e)}")
@@ -686,6 +687,7 @@ async def update_complete_recipe(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error updating recipe: {str(e)}"
         )
+
 
 @router.get("/{recipe_id}/edit", response_model=CompleteRecipeUpdate)
 async def get_recipe_for_edit(
@@ -730,3 +732,184 @@ async def get_recipe_for_edit(
         "steps": steps,
         "ingredients": ingredients
     }
+
+# Add this to your recipe_router.py
+
+
+@router.post("/{recipe_id}/copy", response_model=RecipeResponse, status_code=status.HTTP_201_CREATED)
+async def copy_recipe(
+    recipe_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Copy a recipe to the current user's account
+
+    Creates a new recipe with all steps and ingredients, but with the current user as owner.
+    The original recipe must be public or owned by the current user.
+
+    Args:
+        recipe_id: ID of the recipe to copy
+        current_user: Currently authenticated user
+        db: Database session
+
+    Returns:
+        The newly created recipe copy
+
+    Raises:
+        HTTPException: If recipe not found, not public, or user tries to copy their own recipe
+    """
+    try:
+        # Get the original recipe
+        original_recipe = db.query(Recipe).filter(
+            Recipe.id == recipe_id).first()
+
+        if not original_recipe:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Recipe not found"
+            )
+
+        # Check if user is trying to copy their own recipe
+        if original_recipe.user_id == current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You cannot copy your own recipe"
+            )
+
+        # Check if recipe is public (non-owners can only copy public recipes)
+        if not original_recipe.is_public:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This recipe is private and cannot be copied"
+            )
+
+        # 1. Create new recipe with modified title
+        new_recipe = Recipe(
+            title=f"{original_recipe.title} (Copy)",
+            description=original_recipe.description,
+            is_public=False,  # Copy starts as private
+            preparation_time=original_recipe.preparation_time,
+            cooking_time=original_recipe.cooking_time,
+            servings=original_recipe.servings,
+            user_id=current_user.id  # Set current user as owner
+        )
+
+        db.add(new_recipe)
+        db.flush()  # Get new recipe ID
+
+        # 2. Copy all steps
+        original_steps = db.query(Step).filter(
+            Step.recipe_id == recipe_id
+        ).order_by(Step.order_number).all()
+
+        new_steps = []
+        for original_step in original_steps:
+            new_step = Step(
+                recipe_id=new_recipe.id,
+                order_number=original_step.order_number,
+                action_type=original_step.action_type,
+                temperature=original_step.temperature,
+                speed=original_step.speed,
+                duration=original_step.duration,
+                description=original_step.description
+            )
+            db.add(new_step)
+            new_steps.append(new_step)
+
+        db.flush()  # Get new step IDs
+
+        # 3. Copy all ingredients with step references
+        original_ingredients = db.query(RecipeIngredient).filter(
+            RecipeIngredient.recipe_id == recipe_id
+        ).all()
+
+        # Create a mapping from old step IDs to new step IDs
+        step_id_mapping = {}
+        for i, original_step in enumerate(original_steps):
+            if i < len(new_steps):
+                step_id_mapping[original_step.id] = new_steps[i].id
+
+        for original_ingredient in original_ingredients:
+            # Map the step_id to the new step if it exists
+            new_step_id = None
+            if original_ingredient.step_id:
+                new_step_id = step_id_mapping.get(original_ingredient.step_id)
+
+            new_ingredient = RecipeIngredient(
+                recipe_id=new_recipe.id,
+                ingredient_id=original_ingredient.ingredient_id,
+                quantity=original_ingredient.quantity,
+                step_id=new_step_id
+            )
+            db.add(new_ingredient)
+
+        # Commit all changes
+        db.commit()
+        db.refresh(new_recipe)
+
+        return new_recipe
+
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"Error copying recipe: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error copying recipe: {str(e)}"
+        )
+
+    # Add this to your recipe_router.py
+
+
+@router.delete("/{recipe_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_recipe(
+    recipe_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a recipe and all its associated data
+
+    Deletes the recipe along with all steps and ingredients.
+    Only the recipe owner can delete their recipe.
+
+    Args:
+        recipe_id: ID of the recipe to delete
+        current_user: Currently authenticated user
+        db: Database session
+
+    Returns:
+        HTTP 204 No Content on successful deletion
+
+    Raises:
+        HTTPException: If recipe not found or user is not the owner
+    """
+    try:
+        # Check ownership (this will raise 404 if recipe not found, 403 if not owner)
+        recipe = check_recipe_ownership(recipe_id, current_user.id, db)
+
+        # Delete the recipe (cascade will handle steps and ingredients)
+        db.delete(recipe)
+        db.commit()
+
+        return  # 204 No Content response
+
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"Error deleting recipe: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error deleting recipe: {str(e)}"
+        )

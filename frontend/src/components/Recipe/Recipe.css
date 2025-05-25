@@ -9,7 +9,7 @@
     margin-bottom: 20px;
 }
 
-/* Add this new section for the top actions area */
+/* Updated top actions area with better layout */
 .recipe-top-actions {
     display: flex;
     justify-content: space-between;
@@ -19,6 +19,12 @@
 
 .recipe-top-actions .back-button {
     margin-bottom: 0;
+}
+
+.recipe-action-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
 }
 
 .edit-recipe-btn {
@@ -34,11 +40,221 @@
     color: white;
 }
 
+/* Copy recipe button styles */
+.copy-recipe-btn {
+    color: #28a745;
+    border-color: #28a745;
+    padding: 6px 15px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.copy-recipe-btn:hover:not(:disabled) {
+    background-color: #28a745;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+}
+
+.copy-recipe-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Delete recipe button styles */
+.delete-recipe-btn {
+    color: #dc3545;
+    border-color: #dc3545;
+    padding: 6px 15px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.delete-recipe-btn:hover:not(:disabled) {
+    background-color: #dc3545;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+}
+
+.delete-recipe-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Login button for non-authenticated users */
+.btn-outline-info {
+    color: #17a2b8;
+    border-color: #17a2b8;
+    padding: 6px 15px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.btn-outline-info:hover {
+    background-color: #17a2b8;
+    color: white;
+}
+
+/* Success and error message styling */
+.alert {
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+/* Loading spinner */
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Delete confirmation modal styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.75);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(3px);
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    border: 2px solid #dee2e6;
+    animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-50px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.modal-header {
+    padding: 20px 20px 15px 20px;
+    border-bottom: 2px solid #dee2e6;
+    background-color: #f8f9fa;
+    border-radius: 10px 10px 0 0;
+}
+
+.modal-header h5 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #dc3545;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modal-body {
+    padding: 25px;
+    background-color: white;
+}
+
+.modal-body p {
+    margin-bottom: 15px;
+    color: #333;
+    line-height: 1.5;
+    font-size: 1rem;
+}
+
+.modal-body p:first-child {
+    font-weight: 500;
+    font-size: 1.1rem;
+}
+
+.modal-body .text-danger {
+    color: #dc3545 !important;
+    background-color: #fff5f5;
+    padding: 10px;
+    border-radius: 6px;
+    border-left: 4px solid #dc3545;
+    margin-top: 15px;
+}
+
+.modal-footer {
+    padding: 15px 25px 25px 25px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background-color: #f8f9fa;
+    border-radius: 0 0 10px 10px;
+    border-top: 1px solid #dee2e6;
+}
+
+.modal-footer .btn {
+    min-width: 100px;
+    font-weight: 500;
+    padding: 8px 20px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.modal-footer .btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: white;
+}
+
+.modal-footer .btn-secondary:hover:not(:disabled) {
+    background-color: #5a6268;
+    border-color: #545b62;
+    transform: translateY(-1px);
+}
+
+.modal-footer .btn-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+}
+
+.modal-footer .btn-danger:hover:not(:disabled) {
+    background-color: #c82333;
+    border-color: #bd2130;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+}
+
 .recipe-left-column {
     margin-bottom: 20px;
 }
 
-/* Modify this to only have the title, not the button */
 .recipe-title-row {
     margin-bottom: 15px;
 }
@@ -144,11 +360,18 @@
     max-width: 500px;
 }
 
+/* Responsive design */
 @media (max-width: 768px) {
     .recipe-top-actions {
         flex-direction: column;
         align-items: flex-start;
-        gap: 10px;
+        gap: 15px;
+    }
+
+    .recipe-action-buttons {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
     }
 
     .recipe-meta {
@@ -162,5 +385,44 @@
 
     .recipe-left-column img {
         max-height: 300px;
+    }
+
+    .copy-recipe-btn,
+    .edit-recipe-btn,
+    .delete-recipe-btn,
+    .btn-outline-info {
+        font-size: 0.8rem;
+        padding: 5px 10px;
+    }
+}
+
+@media (max-width: 576px) {
+    .recipe-action-buttons {
+        flex-direction: column;
+        width: 100%;
+        gap: 8px;
+    }
+
+    .copy-recipe-btn,
+    .edit-recipe-btn,
+    .delete-recipe-btn,
+    .btn-outline-info {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Modal responsive adjustments */
+    .modal-content {
+        width: 95%;
+        margin: 10px;
+    }
+
+    .modal-footer {
+        flex-direction: column;
+    }
+
+    .modal-footer .btn {
+        width: 100%;
+        margin-bottom: 5px;
     }
 }

@@ -20,6 +20,11 @@ const Recipe = ({ recipeId }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [isOwner, setIsOwner] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [copying, setCopying] = useState(false);
+    const [copySuccess, setCopySuccess] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
 
     useEffect(() => {
         const fetchRecipeData = async () => {
@@ -32,6 +37,7 @@ const Recipe = ({ recipeId }) => {
                 const token = localStorage.getItem("token");
                 let userData = null;
                 if (token) {
+                    setIsLoggedIn(true);
                     const userStr = localStorage.getItem("user");
                     if (userStr) {
                         try {
@@ -92,7 +98,8 @@ const Recipe = ({ recipeId }) => {
                             description: step.description,
                             temperature: step.temperature.toString(),
                             speed: step.speed.toString(),
-                            duration: step.duration.toString()
+                            duration: step.duration.toString(),
+                            actionType: step.action_type
                         }));
                 }
 
@@ -144,21 +151,24 @@ const Recipe = ({ recipeId }) => {
                         description: "Pour 2 liters of water into the bowl, add salt, bring to a boil. Add the pasta and cook until tender. Drain, reserving 1 cup of pasta water.",
                         temperature: "100",
                         speed: "2",
-                        duration: "10"
+                        duration: "10",
+                        actionType: "cook"
                     },
                     {
                         stepNumber: "Step 2",
                         description: "Heat olive oil in a pan, add garlic and shallots, and sauté until fragrant. Add hummus and thin with pasta water to create the sauce.",
                         temperature: "90",
                         speed: "1",
-                        duration: "15"
+                        duration: "15",
+                        actionType: "fry"
                     },
                     {
                         stepNumber: "Step 3",
                         description: "Combine the cooked pasta with the hummus sauce. Add any desired herbs or veggies and mix well.",
                         temperature: "20",
                         speed: "0",
-                        duration: "5"
+                        duration: "5",
+                        actionType: "mix"
                     }
                 ]
             };
@@ -176,11 +186,90 @@ const Recipe = ({ recipeId }) => {
         navigate(-1);
     };
 
+    const handleCopyRecipe = async () => {
+        try {
+            setCopying(true);
+
+            const token = localStorage.getItem("token");
+            if (!token) {
+                navigate("/login");
+                return;
+            }
+
+            const response = await fetch(`http://localhost:8000/recipes/${recipeId}/copy`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || "Failed to copy recipe");
+            }
+
+            const newRecipe = await response.json();
+            setCopySuccess(true);
+
+            // Show success message for 2 seconds, then redirect to the new recipe
+            setTimeout(() => {
+                navigate(`/recipe/${newRecipe.id}`);
+            }, 2000);
+
+        } catch (err) {
+            console.error("Error copying recipe:", err);
+            setError(err.message || "Failed to copy recipe");
+            setCopying(false);
+        }
+    };
+
+    const handleDeleteRecipe = async () => {
+        try {
+            setDeleting(true);
+
+            const token = localStorage.getItem("token");
+            if (!token) {
+                navigate("/login");
+                return;
+            }
+
+            const response = await fetch(`http://localhost:8000/recipes/${recipeId}`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || "Failed to delete recipe");
+            }
+
+            // Recipe deleted successfully - redirect to home or recipes list
+            navigate("/home");
+
+        } catch (err) {
+            console.error("Error deleting recipe:", err);
+            setError(err.message || "Failed to delete recipe");
+            setDeleting(false);
+            setShowDeleteModal(false);
+        }
+    };
+
+    const confirmDelete = () => {
+        setShowDeleteModal(true);
+    };
+
+    const cancelDelete = () => {
+        setShowDeleteModal(false);
+    };
+
     if (loading) {
         return <div className="loading">Loading recipe...</div>;
     }
 
-    if (error) {
+    if (error && !recipe.title) {
         return (
             <div className="error-container">
                 <div className="error-message">{error}</div>
@@ -193,21 +282,85 @@ const Recipe = ({ recipeId }) => {
 
     return (
         <div className="recipe-container">
-            {/* New top actions section with back and edit buttons */}
+            {/* Success message for copying */}
+            {copySuccess && (
+                <div className="alert alert-success mb-3">
+                    Recipe copied successfully! Redirecting to your copy...
+                </div>
+            )}
+
+            {/* Error message */}
+            {error && (
+                <div className="alert alert-danger mb-3">
+                    {error}
+                </div>
+            )}
+
+            {/* Top actions section with back, edit, copy, and delete buttons */}
             <div className="recipe-top-actions">
                 <button className="back-button btn btn-outline-secondary" onClick={handleBackClick}>
                     ← Back
                 </button>
-                {isOwner && (
-                    <button
-                        className="btn btn-outline-primary edit-recipe-btn"
-                        onClick={() => navigate(`/edit-recipe/${recipeId}`)}
-                    >
-                        Edit Recipe
-                    </button>
-                )}
+
+                <div className="recipe-action-buttons">
+                    {isOwner && (
+                        <>
+                            <button
+                                className="btn btn-outline-primary edit-recipe-btn me-2"
+                                onClick={() => navigate(`/edit-recipe/${recipeId}`)}
+                            >
+                                ✏️ Edit Recipe
+                            </button>
+                            <button
+                                className="btn btn-outline-danger delete-recipe-btn me-2"
+                                onClick={confirmDelete}
+                                disabled={deleting}
+                            >
+                                {deleting ? (
+                                    <>
+                                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                        Deleting...
+                                    </>
+                                ) : (
+                                    <>
+                                        🗑️ Delete Recipe
+                                    </>
+                                )}
+                            </button>
+                        </>
+                    )}
+
+                    {isLoggedIn && !isOwner && (
+                        <button
+                            className="btn btn-outline-success copy-recipe-btn"
+                            onClick={handleCopyRecipe}
+                            disabled={copying}
+                        >
+                            {copying ? (
+                                <>
+                                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    Copying...
+                                </>
+                            ) : (
+                                <>
+                                    📋 Copy to My Recipes
+                                </>
+                            )}
+                        </button>
+                    )}
+
+                    {!isLoggedIn && (
+                        <button
+                            className="btn btn-outline-info"
+                            onClick={() => navigate("/login")}
+                        >
+                            Login to Copy Recipe
+                        </button>
+                    )}
+                </div>
             </div>
 
+            {/* Main recipe content */}
             <div className="row">
                 <div className="col-md-6 mb-4">
                     <div className="recipe-left-column">
@@ -240,7 +393,7 @@ const Recipe = ({ recipeId }) => {
                             </div>
                             <div className="col-md-6">
                                 <div className="recipe-preparation">
-                                    <h3>Instructions</h3>
+                                    <h3>DreamFoodX Instructions</h3>
                                     {recipe.steps.length > 0 ? (
                                         recipe.steps.map((step, index) => (
                                             <Step
@@ -250,6 +403,7 @@ const Recipe = ({ recipeId }) => {
                                                 temperature={step.temperature}
                                                 speed={step.speed}
                                                 duration={step.duration}
+                                                actionType={step.actionType}
                                             />
                                         ))
                                     ) : (
@@ -261,6 +415,46 @@ const Recipe = ({ recipeId }) => {
                     </div>
                 </div>
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && (
+                <div className="modal-overlay" onClick={cancelDelete}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h5>⚠️ Delete Recipe</h5>
+                        </div>
+                        <div className="modal-body">
+                            <p>Are you sure you want to delete "<strong>{recipe.title}</strong>"?</p>
+                            <p className="text-danger">
+                                <small>This action cannot be undone. All recipe data, steps, and ingredients will be permanently deleted.</small>
+                            </p>
+                        </div>
+                        <div className="modal-footer">
+                            <button
+                                className="btn btn-secondary me-2"
+                                onClick={cancelDelete}
+                                disabled={deleting}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="btn btn-danger"
+                                onClick={handleDeleteRecipe}
+                                disabled={deleting}
+                            >
+                                {deleting ? (
+                                    <>
+                                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                        Deleting...
+                                    </>
+                                ) : (
+                                    "Delete Recipe"
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
