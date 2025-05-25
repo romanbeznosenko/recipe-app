@@ -146,12 +146,11 @@ const EditRecipe = () => {
   };
 
   // Format duration helper
-  const formatDuration = (seconds) => {
-    if (seconds < 60) return `${seconds} min`;
-    if (seconds < 3600) return `${Math.floor(seconds / 60)} h ${seconds % 60} min`;
-    const hours = Math.floor((seconds % 3600) / 60);
-    const minutes = seconds % 60;
-    return `${hours}h ${minutes}min`;
+  const formatDuration = (minutes) => {
+    if (minutes < 60) return `${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}min` : `${hours}h`;
   };
 
   // Fetch recipe data and available ingredients when component mounts
