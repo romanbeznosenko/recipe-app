@@ -25,6 +25,7 @@ const Recipe = ({ recipeId }) => {
     const [copySuccess, setCopySuccess] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [downloading, setDownloading] = useState(false);
 
     useEffect(() => {
         const fetchRecipeData = async () => {
@@ -265,6 +266,63 @@ const Recipe = ({ recipeId }) => {
         setShowDeleteModal(false);
     };
 
+    const handleDownloadRecipe = async () => {
+        try {
+            setDownloading(true);
+
+            const token = localStorage.getItem("token");
+            let downloadUrl = `http://localhost:8000/recipes/${recipeId}/download`;
+            let headers = {};
+
+            // If user is logged in, use authenticated endpoint for better access to private recipes
+            if (token) {
+                downloadUrl = `http://localhost:8000/recipes/${recipeId}/download/authenticated`;
+                headers["Authorization"] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(downloadUrl, {
+                method: "GET",
+                headers: headers
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || "Failed to download recipe");
+            }
+
+            // Get the JSON data
+            const recipeData = await response.json();
+
+            // Create filename
+            const safeTitle = recipe.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const filename = `dreamfoodx_recipe_${safeTitle}_${recipeId}.json`;
+
+            // Create blob and download
+            const blob = new Blob([JSON.stringify(recipeData, null, 2)], {
+                type: 'application/json'
+            });
+
+            // Create download link
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+
+            // Cleanup
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(link);
+
+            setDownloading(false);
+
+        } catch (err) {
+            console.error("Error downloading recipe:", err);
+            setError(err.message || "Failed to download recipe");
+            setDownloading(false);
+        }
+    };
+
     if (loading) {
         return <div className="loading">Loading recipe...</div>;
     }
@@ -332,7 +390,7 @@ const Recipe = ({ recipeId }) => {
 
                     {isLoggedIn && !isOwner && (
                         <button
-                            className="btn btn-outline-success copy-recipe-btn"
+                            className="btn btn-outline-success copy-recipe-btn me-2"
                             onClick={handleCopyRecipe}
                             disabled={copying}
                         >
@@ -348,6 +406,24 @@ const Recipe = ({ recipeId }) => {
                             )}
                         </button>
                     )}
+
+                    {/* Download button - available for all users who can view the recipe */}
+                    <button
+                        className="btn btn-outline-info download-recipe-btn me-2"
+                        onClick={handleDownloadRecipe}
+                        disabled={downloading}
+                    >
+                        {downloading ? (
+                            <>
+                                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                Downloading...
+                            </>
+                        ) : (
+                            <>
+                                💾 Download JSON
+                            </>
+                        )}
+                    </button>
 
                     {!isLoggedIn && (
                         <button

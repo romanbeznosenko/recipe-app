@@ -2,6 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel, Field
+from fastapi.responses import JSONResponse
+import json
+from datetime import datetime
 
 from db.base import get_db
 from db.entries.Recipe import Recipe
@@ -912,4 +915,245 @@ async def delete_recipe(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error deleting recipe: {str(e)}"
+        )
+
+
+@router.get("/{recipe_id}/download", response_class=JSONResponse)
+async def download_recipe_json(
+    recipe_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Download a recipe as a JSON file
+
+    Returns the complete recipe data including steps and ingredients in JSON format.
+    Only public recipes or recipes owned by the authenticated user can be downloaded.
+
+    Args:
+        recipe_id: Recipe ID to download
+        db: Database session
+
+    Returns:
+        JSONResponse with recipe data and appropriate headers for download
+
+    Raises:
+        HTTPException: If recipe not found or not accessible
+    """
+    try:
+        # Get the recipe
+        recipe = get_recipe_or_404(recipe_id, db)
+
+        # Check if recipe is public (no authentication required for public recipes)
+        if not recipe.is_public:
+            # For private recipes, user must be authenticated and be the owner
+            # Since this is optional authentication, we'll check if there's a token
+            # but won't require it for public recipes
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This recipe is private and cannot be downloaded"
+            )
+
+        # Get recipe steps
+        steps = db.query(Step).filter(
+            Step.recipe_id == recipe_id
+        ).order_by(Step.order_number).all()
+
+        # Get recipe ingredients with ingredient details
+        recipe_ingredients = db.query(
+            RecipeIngredient.quantity,
+            RecipeIngredient.step_id,
+            Ingredient.id,
+            Ingredient.name,
+            Ingredient.unit
+        ).join(
+            Ingredient, RecipeIngredient.ingredient_id == Ingredient.id
+        ).filter(
+            RecipeIngredient.recipe_id == recipe_id
+        ).all()
+
+        # Format the complete recipe data
+        recipe_data = {
+            "recipe": {
+                "id": recipe.id,
+                "title": recipe.title,
+                "description": recipe.description,
+                "is_public": recipe.is_public,
+                "preparation_time": recipe.preparation_time,
+                "cooking_time": recipe.cooking_time,
+                "servings": recipe.servings,
+                "created_at": recipe.created_at.isoformat() if recipe.created_at else None,
+                "updated_at": recipe.updated_at.isoformat() if recipe.updated_at else None
+            },
+            "steps": [
+                {
+                    "order_number": step.order_number,
+                    "action_type": step.action_type,
+                    "temperature": step.temperature,
+                    "speed": step.speed,
+                    "duration": step.duration,
+                    "description": step.description
+                }
+                for step in steps
+            ],
+            "ingredients": [
+                {
+                    "name": ingredient.name,
+                    "quantity": ingredient.quantity,
+                    "unit": ingredient.unit,
+                    "step_id": ingredient.step_id
+                }
+                for ingredient in recipe_ingredients
+            ],
+            "export_info": {
+                "exported_at": datetime.utcnow().isoformat(),
+                "format_version": "1.0",
+                "source": "DreamFoodX Recipe App"
+            }
+        }
+
+        # Create filename
+        safe_title = "".join(
+            c for c in recipe.title if c.isalnum() or c in (' ', '-', '_')).rstrip()
+        safe_title = safe_title.replace(' ', '_')
+        filename = f"dreamfoodx_recipe_{safe_title}_{recipe.id}.json"
+
+        # Return JSON response with download headers
+        return JSONResponse(
+            content=recipe_data,
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Type": "application/json",
+                "Cache-Control": "no-cache"
+            }
+        )
+
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        print(f"Error downloading recipe: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error downloading recipe: {str(e)}"
+        )
+
+
+@router.get("/{recipe_id}/download/authenticated")
+async def download_recipe_json_authenticated(
+    recipe_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Download a recipe as JSON file (authenticated version)
+
+    Allows downloading of private recipes if user is the owner,
+    or any public recipe.
+
+    Args:
+        recipe_id: Recipe ID to download
+        current_user: Currently authenticated user
+        db: Database session
+
+    Returns:
+        JSONResponse with recipe data and download headers
+    """
+    try:
+        # Get the recipe
+        recipe = get_recipe_or_404(recipe_id, db)
+
+        # Check access permissions
+        if not recipe.is_public and recipe.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You don't have permission to download this recipe"
+            )
+
+        # Get recipe steps
+        steps = db.query(Step).filter(
+            Step.recipe_id == recipe_id
+        ).order_by(Step.order_number).all()
+
+        # Get recipe ingredients with ingredient details
+        recipe_ingredients = db.query(
+            RecipeIngredient.quantity,
+            RecipeIngredient.step_id,
+            Ingredient.id,
+            Ingredient.name,
+            Ingredient.unit
+        ).join(
+            Ingredient, RecipeIngredient.ingredient_id == Ingredient.id
+        ).filter(
+            RecipeIngredient.recipe_id == recipe_id
+        ).all()
+
+        # Format the complete recipe data
+        recipe_data = {
+            "recipe": {
+                "id": recipe.id,
+                "title": recipe.title,
+                "description": recipe.description,
+                "is_public": recipe.is_public,
+                "preparation_time": recipe.preparation_time,
+                "cooking_time": recipe.cooking_time,
+                "servings": recipe.servings,
+                "created_at": recipe.created_at.isoformat() if recipe.created_at else None,
+                "updated_at": recipe.updated_at.isoformat() if recipe.updated_at else None
+            },
+            "steps": [
+                {
+                    "order_number": step.order_number,
+                    "action_type": step.action_type,
+                    "temperature": step.temperature,
+                    "speed": step.speed,
+                    "duration": step.duration,
+                    "description": step.description
+                }
+                for step in steps
+            ],
+            "ingredients": [
+                {
+                    "name": ingredient.name,
+                    "quantity": ingredient.quantity,
+                    "unit": ingredient.unit,
+                    "step_id": ingredient.step_id
+                }
+                for ingredient in recipe_ingredients
+            ],
+            "export_info": {
+                "exported_at": datetime.utcnow().isoformat(),
+                "exported_by": current_user.username,
+                "format_version": "1.0",
+                "source": "DreamFoodX Recipe App"
+            }
+        }
+
+        # Create filename
+        safe_title = "".join(
+            c for c in recipe.title if c.isalnum() or c in (' ', '-', '_')).rstrip()
+        safe_title = safe_title.replace(' ', '_')
+        filename = f"dreamfoodx_recipe_{safe_title}_{recipe.id}.json"
+
+        # Return JSON response with download headers
+        return JSONResponse(
+            content=recipe_data,
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Type": "application/json",
+                "Cache-Control": "no-cache"
+            }
+        )
+
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        print(f"Error downloading recipe: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error downloading recipe: {str(e)}"
         )

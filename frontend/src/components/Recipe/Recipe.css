@@ -88,6 +88,30 @@
     cursor: not-allowed;
 }
 
+/* Download recipe button styles */
+.download-recipe-btn {
+    color: #17a2b8;
+    border-color: #17a2b8;
+    padding: 6px 15px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.download-recipe-btn:hover:not(:disabled) {
+    background-color: #17a2b8;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(23, 162, 184, 0.3);
+}
+
+.download-recipe-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 /* Login button for non-authenticated users */
 .btn-outline-info {
     color: #17a2b8;
@@ -390,6 +414,7 @@
     .copy-recipe-btn,
     .edit-recipe-btn,
     .delete-recipe-btn,
+    .download-recipe-btn,
     .btn-outline-info {
         font-size: 0.8rem;
         padding: 5px 10px;
@@ -406,6 +431,7 @@
     .copy-recipe-btn,
     .edit-recipe-btn,
     .delete-recipe-btn,
+    .download-recipe-btn,
     .btn-outline-info {
         width: 100%;
         justify-content: center;
