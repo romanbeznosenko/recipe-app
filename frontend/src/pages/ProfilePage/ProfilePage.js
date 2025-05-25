@@ -111,17 +111,8 @@ const ProfilePage = () => {
                                 <span className="stat-value">{recipes.length}</span>
                                 <span className="stat-label">Recipes</span>
                             </div>
-                            <div className="stat-item">
-                                <span className="stat-value">0</span>
-                                <span className="stat-label">Following</span>
-                            </div>
-                            <div className="stat-item">
-                                <span className="stat-value">0</span>
-                                <span className="stat-label">Followers</span>
-                            </div>
                         </div>
                         <div className="user-actions">
-                            <button className="edit-profile-btn">Edit Profile</button>
                             <button className="create-recipe-btn" onClick={() => navigate('/create-recipe')}>
                                 Create Recipe
                             </button>
