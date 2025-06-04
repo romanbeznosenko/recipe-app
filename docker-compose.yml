@@ -24,7 +24,7 @@ services:
     container_name: recipe-api
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev # Use development Dockerfile
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -32,29 +32,45 @@ services:
       mysql:
         condition: service_healthy
     volumes:
+      # Mount source code for live reload
       - ./backend:/app
+      # But exclude certain directories that should stay in container
+      - /app/__pycache__
+      - /app/.pytest_cache
     networks:
       - app-network
     environment:
       - MYSQL_HOST=mysql
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - PYTHONPATH=/app
+    # Enable hot reload for development
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
     container_name: recipe-ui
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev # Use development Dockerfile
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "3000:3000" # Changed to development port
     depends_on:
       - backend
     volumes:
+      # Mount source code for live reload
       - ./frontend:/app
+      # Exclude node_modules (use container's version)
       - /app/node_modules
     networks:
       - app-network
     environment:
-      - REACT_APP_API_URL=http://localhost/api
+      - REACT_APP_API_URL=http://localhost:8000
+      - CHOKIDAR_USEPOLLING=true # Enable file watching in Docker
+    # Start development server
+    command: npm start
 
 networks:
   app-network:
