@@ -6,6 +6,7 @@ import ProfilePage from "./pages/ProfilePage/ProfilePage";
 import RecipePage from "./pages/RecipePage/RecipePage";
 import CreateRecipePage from "./pages/CreateRecipePage/CreateRecipePage";
 import EditRecipePage from "./pages/EditRecipePage/EditRecipePage";
+import PlayRecipePage from "./pages/PlayRecipePage/PlayRecipePage";
 import "./App.css";
 
 // Protected route component
@@ -52,6 +53,7 @@ function App() {
             </ProtectedRoute>
           } 
         />
+        <Route path="/play-recipe" element={<PlayRecipePage />} />
       </Routes>
     </Router>
   );

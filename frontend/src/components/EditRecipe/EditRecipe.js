@@ -4,6 +4,76 @@ import TopNav from "../../components/TopNav/TopNav";
 import "./EditRecipe.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 
+// Ingredient Categories
+const INGREDIENT_CATEGORIES = {
+  vegetables: {
+    label: "Vegetables",
+    icon: "🥕",
+    color: "#4caf50"
+  },
+  fruits: {
+    label: "Fruits",
+    icon: "🍎",
+    color: "#ff9800"
+  },
+  meat_poultry: {
+    label: "Meat & Poultry",
+    icon: "🥩",
+    color: "#d32f2f"
+  },
+  seafood: {
+    label: "Seafood",
+    icon: "🐟",
+    color: "#2196f3"
+  },
+  dairy: {
+    label: "Dairy & Eggs",
+    icon: "🥛",
+    color: "#fff3e0"
+  },
+  grains_cereals: {
+    label: "Grains & Cereals",
+    icon: "🌾",
+    color: "#8bc34a"
+  },
+  legumes: {
+    label: "Legumes & Nuts",
+    icon: "🥜",
+    color: "#795548"
+  },
+  herbs_spices: {
+    label: "Herbs & Spices",
+    icon: "🌿",
+    color: "#689f38"
+  },
+  oils_fats: {
+    label: "Oils & Fats",
+    icon: "🛢️",
+    color: "#ffc107"
+  },
+  condiments: {
+    label: "Condiments & Sauces",
+    icon: "🍯",
+    color: "#e91e63"
+  },
+  beverages: {
+    label: "Beverages",
+    icon: "🥤",
+    color: "#00bcd4"
+  },
+  other: {
+    label: "Other",
+    icon: "📦",
+    color: "#9e9e9e"
+  }
+};
+
+// Common units for ingredients
+const COMMON_UNITS = [
+  "g", "kg", "ml", "l", "piece", "pieces", "cup", "cups", "tsp", "tbsp",
+  "oz", "lb", "clove", "cloves", "bunch", "handful", "slice", "slices"
+];
+
 // DreamFoodX Action Types Configuration
 const DREAMFOODX_ACTIONS = {
   chop: {
@@ -106,6 +176,16 @@ const EditRecipe = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [availableIngredients, setAvailableIngredients] = useState([]);
+  const [categorizedIngredients, setCategorizedIngredients] = useState({});
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [showCreateIngredient, setShowCreateIngredient] = useState(false);
+
+  // New ingredient creation state
+  const [newIngredient, setNewIngredient] = useState({
+    name: "",
+    unit: "g",
+    category: "other"
+  });
 
   // Recipe state
   const [recipe, setRecipe] = useState({
@@ -141,6 +221,7 @@ const EditRecipe = () => {
       }));
     }
   }, [steps]);
+
   const getActionConfig = (actionType) => {
     return DREAMFOODX_ACTIONS[actionType] || DREAMFOODX_ACTIONS.mix;
   };
@@ -151,6 +232,111 @@ const EditRecipe = () => {
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
     return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}min` : `${hours}h`;
+  };
+
+  // Categorize ingredients helper
+  const categorizeIngredients = (ingredients) => {
+    const categorized = {};
+
+    // Initialize categories
+    Object.keys(INGREDIENT_CATEGORIES).forEach(category => {
+      categorized[category] = [];
+    });
+
+    // Group ingredients by category
+    ingredients.forEach(ingredient => {
+      const category = ingredient.category || 'other';
+      if (categorized[category]) {
+        categorized[category].push(ingredient);
+      } else {
+        categorized['other'].push(ingredient);
+      }
+    });
+
+    return categorized;
+  };
+
+  // Get ingredients for selected category
+  const getIngredientsForCategory = (category) => {
+    return categorizedIngredients[category] || [];
+  };
+
+  // Create new ingredient
+  const createNewIngredient = async () => {
+    try {
+      if (!newIngredient.name.trim()) {
+        setError("Please enter an ingredient name");
+        return;
+      }
+
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      console.log("Creating ingredient:", newIngredient);
+
+      const response = await fetch("http://localhost:8000/ingredients/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: newIngredient.name.trim(),
+          unit: newIngredient.unit,
+          category: newIngredient.category
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Error response:", errorData);
+        throw new Error(errorData.detail || "Failed to create ingredient");
+      }
+
+      const createdIngredient = await response.json();
+      console.log("Created ingredient:", createdIngredient);
+
+      // Add to available ingredients
+      const updatedIngredients = [...availableIngredients, createdIngredient];
+      setAvailableIngredients(updatedIngredients);
+
+      // Update categorized ingredients
+      const categorized = categorizeIngredients(updatedIngredients);
+      setCategorizedIngredients(categorized);
+
+      // Reset form
+      setNewIngredient({
+        name: "",
+        unit: "g",
+        category: "other"
+      });
+      setShowCreateIngredient(false);
+      setError("");
+
+      // Auto-select the new ingredient in the current ingredient form
+      const currentIngredientIndex = ingredients.length - 1;
+      if (currentIngredientIndex >= 0) {
+        const updatedIngredientsState = [...ingredients];
+        updatedIngredientsState[currentIngredientIndex].ingredient_id = createdIngredient.id;
+        setIngredients(updatedIngredientsState);
+      }
+
+    } catch (err) {
+      console.error("Error creating ingredient:", err);
+      setError(err.message || "Failed to create ingredient");
+    }
+  };
+
+  // Handle new ingredient form changes
+  const handleNewIngredientChange = (e) => {
+    const { name, value } = e.target;
+    setNewIngredient({
+      ...newIngredient,
+      [name]: value
+    });
   };
 
   // Fetch recipe data and available ingredients when component mounts
@@ -189,9 +375,9 @@ const EditRecipe = () => {
 
         const recipeData = await recipeResponse.json();
 
-        // Fetch available ingredients
+        // Fetch available ingredients using the correct endpoint
         const ingredientsResponse = await fetch(
-          "http://localhost:8000/recipes/ingredients/list",
+          "http://localhost:8000/ingredients/", // Fixed endpoint
           {
             headers: {
               "Content-Type": "application/json",
@@ -210,6 +396,10 @@ const EditRecipe = () => {
         setSteps(recipeData.steps);
         setIngredients(recipeData.ingredients);
         setAvailableIngredients(ingredientsData);
+
+        // Categorize ingredients
+        const categorized = categorizeIngredients(ingredientsData);
+        setCategorizedIngredients(categorized);
 
         setLoading(false);
       } catch (err) {
@@ -408,6 +598,8 @@ const EditRecipe = () => {
         ingredients: formattedIngredients
       };
 
+      console.log("Sending recipe data:", recipeData);
+
       // Get token for authentication
       const token = localStorage.getItem("token");
       if (!token) {
@@ -572,10 +764,113 @@ const EditRecipe = () => {
             </div>
           </div>
 
-          {/* Ingredients Section */}
+          {/* Enhanced Ingredients Section */}
           <div className="card mb-4">
-            <div className="card-header">Ingredients</div>
+            <div className="card-header d-flex justify-content-between align-items-center">
+              <span>Ingredients</span>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-success"
+                onClick={() => setShowCreateIngredient(!showCreateIngredient)}
+              >
+                + New Ingredient
+              </button>
+            </div>
             <div className="card-body">
+              {/* Category Filter */}
+              <div className="mb-4">
+                <label className="form-label">Filter by Category:</label>
+                <div className="category-filters">
+                  <button
+                    type="button"
+                    className={`btn btn-sm category-btn ${!selectedCategory ? 'active' : ''}`}
+                    onClick={() => setSelectedCategory("")}
+                  >
+                    All Categories ({availableIngredients.length})
+                  </button>
+                  {Object.entries(INGREDIENT_CATEGORIES).map(([key, category]) => {
+                    const categoryCount = getIngredientsForCategory(key).length;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        className={`btn btn-sm category-btn ${selectedCategory === key ? 'active' : ''}`}
+                        onClick={() => setSelectedCategory(key)}
+                        style={{ borderColor: category.color }}
+                        disabled={categoryCount === 0}
+                      >
+                        {category.icon} {category.label} ({categoryCount})
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Create New Ingredient Form */}
+              {showCreateIngredient && (
+                <div className="create-ingredient-form mb-4 p-3 border rounded">
+                  <h6>Create New Ingredient</h6>
+                  <div className="row">
+                    <div className="col-md-4">
+                      <label className="form-label">Ingredient Name*</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        name="name"
+                        value={newIngredient.name}
+                        onChange={handleNewIngredientChange}
+                        placeholder="e.g., Fresh basil"
+                      />
+                    </div>
+                    <div className="col-md-3">
+                      <label className="form-label">Unit</label>
+                      <select
+                        className="form-select"
+                        name="unit"
+                        value={newIngredient.unit}
+                        onChange={handleNewIngredientChange}
+                      >
+                        {COMMON_UNITS.map(unit => (
+                          <option key={unit} value={unit}>{unit}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-md-3">
+                      <label className="form-label">Category</label>
+                      <select
+                        className="form-select"
+                        name="category"
+                        value={newIngredient.category}
+                        onChange={handleNewIngredientChange}
+                      >
+                        {Object.entries(INGREDIENT_CATEGORIES).map(([key, category]) => (
+                          <option key={key} value={key}>
+                            {category.icon} {category.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-md-2 d-flex align-items-end">
+                      <button
+                        type="button"
+                        className="btn btn-success me-2"
+                        onClick={createNewIngredient}
+                      >
+                        Create
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={() => setShowCreateIngredient(false)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Ingredients List */}
               {ingredients.map((ingredient, index) => (
                 <div key={`ingredient-${index}`} className="row mb-3 align-items-center">
                   <div className="col-md-6">
@@ -590,11 +885,41 @@ const EditRecipe = () => {
                       required
                     >
                       <option value="">Select an ingredient</option>
-                      {availableIngredients.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name} ({item.unit})
-                        </option>
-                      ))}
+                      {selectedCategory ? (
+                        <>
+                          <optgroup label={INGREDIENT_CATEGORIES[selectedCategory].label}>
+                            {getIngredientsForCategory(selectedCategory).map((item) => (
+                              <option key={item.id} value={item.id}>
+                                {item.name} ({item.unit})
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="Other Categories">
+                            {availableIngredients
+                              .filter(item => (item.category || 'other') !== selectedCategory)
+                              .map((item) => (
+                                <option key={item.id} value={item.id}>
+                                  {INGREDIENT_CATEGORIES[item.category || 'other'].icon} {item.name} ({item.unit})
+                                </option>
+                              ))}
+                          </optgroup>
+                        </>
+                      ) : (
+                        Object.entries(INGREDIENT_CATEGORIES).map(([categoryKey, categoryData]) => {
+                          const categoryIngredients = getIngredientsForCategory(categoryKey);
+                          if (categoryIngredients.length === 0) return null;
+
+                          return (
+                            <optgroup key={categoryKey} label={categoryData.label}>
+                              {categoryIngredients.map((item) => (
+                                <option key={item.id} value={item.id}>
+                                  {item.name} ({item.unit})
+                                </option>
+                              ))}
+                            </optgroup>
+                          );
+                        })
+                      )}
                     </select>
                   </div>
 
@@ -716,7 +1041,7 @@ const EditRecipe = () => {
                       {actionConfig.temperature.show && (
                         <div className="col-md-4">
                           <label className="form-label">
-                            Temperatura (°C)
+                            Temperature (°C)
                             {actionConfig.temperature.min > 0 && (
                               <small className="text-muted">
                                 {" "}({actionConfig.temperature.min}-{actionConfig.temperature.max}°C)
@@ -836,6 +1161,55 @@ const EditRecipe = () => {
           </div>
         </form>
       </div>
+
+      {/* Add Custom CSS for category filters */}
+      <style jsx>{`
+        .category-filters {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-top: 8px;
+        }
+
+        .category-btn {
+          border: 1px solid #dee2e6;
+          background: white;
+          color: #6c757d;
+          transition: all 0.2s ease;
+        }
+
+        .category-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .category-btn.active {
+          background: #0d6efd;
+          color: white;
+          border-color: #0d6efd;
+        }
+
+        .create-ingredient-form {
+          background: #f8f9fa;
+          border-left: 4px solid #28a745;
+        }
+
+        .create-ingredient-form h6 {
+          color: #28a745;
+          margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+          .category-filters {
+            gap: 4px;
+          }
+
+          .category-btn {
+            font-size: 0.8rem;
+            padding: 4px 8px;
+          }
+        }
+      `}</style>
     </div>
   );
 };

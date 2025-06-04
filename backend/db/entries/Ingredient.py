@@ -9,5 +9,6 @@ class Ingredient(Base, TimestampMixin):
     id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False)
     unit = Column(String(255), nullable=False)
+    category = Column(String(63), nullable=False, default="other") 
     
     recipe_ingredients = relationship("RecipeIngredient", back_populates="ingredient")
