@@ -380,31 +380,6 @@ const PlayRecipePage = () => {
                         <p>{currentStepData.description}</p>
                     </div>
 
-                    <div className="step-ingredients">
-                        <h4>Ingredients for this step:</h4>
-                        <ul>
-                            {currentStepData.ingredients && currentStepData.ingredients.length > 0 ? (
-                                currentStepData.ingredients.map((ingredient, index) => (
-                                    <li key={index}>{ingredient}</li>
-                                ))
-                            ) : (
-                                <li>No specific ingredients for this step</li>
-                            )}
-                        </ul>
-                    </div>
-
-                    {/* Cooking Tips Section */}
-                    {cookingTips.length > 0 && (
-                        <div className="cooking-tips">
-                            <h4>💡 Cooking Tips:</h4>
-                            <ul>
-                                {cookingTips.map((tip, index) => (
-                                    <li key={index}>{tip}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-
                     {/* Action-specific instructions */}
                     <div className="action-instructions">
                         <h4>🎯 DreamFoodX Instructions:</h4>
