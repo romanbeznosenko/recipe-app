@@ -76,6 +76,24 @@ const COMMON_UNITS = [
 
 // DreamFoodX Action Types Configuration
 const DREAMFOODX_ACTIONS = {
+    add: {
+        label: "Add Ingredients",
+        icon: "➕",
+        description: "Adding ingredients to the bowl",
+        temperature: { show: false, default: 0 },
+        speed: { show: false, default: 0 },
+        duration: { show: false, default: 0 },
+        tips: "Simply add ingredients to the bowl without any processing"
+    },
+    description: {
+        label: "Description",
+        icon: "📝",
+        description: "Instruction or description step",
+        temperature: { show: false, default: 0 },
+        speed: { show: false, default: 0 },
+        duration: { show: false, default: 0 },
+        tips: "Use for preparation instructions, tips, or general cooking notes"
+    },
     chop: {
         label: "Chop",
         icon: "🔪",
@@ -165,7 +183,8 @@ const DREAMFOODX_ACTIONS = {
         speed: { show: false, default: 0 },
         duration: { show: true, default: 10, min: 1, max: 180 },
         tips: "Time for dough to rise or ingredients to cool"
-    }
+    },
+
 };
 
 const CreateRecipe = () => {
