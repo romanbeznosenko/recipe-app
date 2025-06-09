@@ -108,6 +108,8 @@ const PlayRecipePage = () => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [completedSteps, setCompletedSteps] = useState(new Set());
     const [cookingTips, setCookingTips] = useState([]);
+    const [elapsedTime, setElapsedTime] = useState(0);
+    const [flashNextButton, setFlashNextButton] = useState(false);
 
     // Fetch recipe data from API
     useEffect(() => {
@@ -194,6 +196,47 @@ const PlayRecipePage = () => {
         if (temp <= 80) return '#ffc107';
         return '#dc3545';
     };
+    
+    // Update elapsed time every second while playing
+    useEffect(() => {
+        if (!isPlaying || !currentStepData?.duration) return;
+
+        setElapsedTime(0);
+
+        const interval = setInterval(() => {
+            setElapsedTime(prev => {
+                if (prev >= currentStepData.duration * 60) {
+                    clearInterval(interval);
+                    return prev;
+                }
+                return prev + 1;
+            });
+        }, 10); // 1000 - update every second, 10 - update every 10ms for presentation
+
+        return () => clearInterval(interval);
+    }, [currentStepData, isPlaying]);
+
+    // Flash next button when time is up
+    useEffect(() => {
+        if (!isPlaying || !currentStepData?.duration) return;
+
+        setElapsedTime(0);
+        setFlashNextButton(false);
+
+        const interval = setInterval(() => {
+            setElapsedTime(prev => {
+                if (prev >= currentStepData.duration * 60) {
+                    clearInterval(interval);
+                    setFlashNextButton(true);
+                    return prev;
+                }
+                return prev + 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [currentStepData, isPlaying]);
+
 
     if (loading) {
         return (
@@ -380,6 +423,21 @@ const PlayRecipePage = () => {
                         <p>{currentStepData.description}</p>
                     </div>
 
+                    {/* Step timer-slider interface */}
+                    <div className="step-timer">
+                        <label>⏳ Step Progress</label>
+                        <div className="timer-slider">
+                            <progress
+                                value={elapsedTime}
+                                max={currentStepData.duration * 60}
+                            ></progress>
+                            <div className="time-labels">
+                                <span>{Math.floor(elapsedTime / 60)}:{(elapsedTime % 60).toString().padStart(2, '0')}</span>
+                                <span>{currentStepData.duration}:00</span>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Action-specific instructions */}
                     <div className="action-instructions">
                         <h4>🎯 DreamFoodX Instructions:</h4>
@@ -409,14 +467,21 @@ const PlayRecipePage = () => {
                     </button>
 
                     {currentStep < totalSteps - 1 ? (
-                        <button className="control-btn next" onClick={nextStep}>
+                        <button
+                            className={`control-btn next ${flashNextButton ? 'pulse-glow' : ''}`}
+                            onClick={nextStep}
+                        >
                             Next Step →
                         </button>
                     ) : (
-                        <button className="control-btn finish" onClick={finishCooking}>
+                        <button
+                            className={`control-btn finish ${flashNextButton ? 'pulse-glow' : ''}`}
+                            onClick={finishCooking}
+                        >
                             🎉 Finish Cooking
                         </button>
                     )}
+
                 </div>
             </div>
         </div>
