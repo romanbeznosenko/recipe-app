@@ -922,3 +922,67 @@
         font-size: 0.75rem;
     }
 }
+
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 0 5px #28a745;
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 15px #28a745;
+    transform: scale(1.05);
+  }
+  100% {
+    box-shadow: 0 0 5px #28a745;
+    transform: scale(1);
+  }
+}
+
+.pulse-glow {
+  animation: pulseGlow 1.5s infinite;
+}
+
+
+.step-timer {
+    margin-top: 1.5rem;
+}
+
+.step-timer label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.timer-slider {
+    width: 100%;
+}
+
+.timer-slider progress {
+    width: 100%;
+    height: 16px;
+    border-radius: 8px;
+    overflow: hidden;
+    appearance: none;
+}
+
+.timer-slider progress::-webkit-progress-bar {
+    background-color: #eee;
+    border-radius: 8px;
+}
+
+.timer-slider progress::-webkit-progress-value {
+    background-color: #28a745;
+    border-radius: 8px;
+}
+
+.timer-slider progress::-moz-progress-bar {
+    background-color: #28a745;
+    border-radius: 8px;
+}
+
+.time-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+}
