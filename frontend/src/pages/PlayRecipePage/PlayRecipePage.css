@@ -986,3 +986,27 @@
     font-size: 0.9rem;
     margin-top: 0.25rem;
 }
+
+.control-btn.reset {
+    background: #dc3545; 
+    color: white;
+    border: none;
+}
+
+.control-btn.start-stop {
+    background: #5a6268;
+    color: white;
+    border: none;
+}
+
+.control-btn.skip {
+    background: #007bff; 
+    color: white;
+    border: none;
+}
+
+.control-btn.start {
+    background: #BCAE1C; 
+    color: white;
+    border: none;
+}
