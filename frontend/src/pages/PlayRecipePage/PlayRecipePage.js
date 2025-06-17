@@ -485,8 +485,8 @@ const PlayRecipePage = () => {
                         <button
                             className="control-btn skip"
                             onClick={() => {
-                                setStepStarted(false);       // Stop the current timer
-                                setElapsedTime(0);           // Reset the elapsed time
+                                setStepStarted(false);       
+                                setElapsedTime(0);           
 
                                 if (currentStep < totalSteps - 1) {
                                 nextStep();
@@ -501,7 +501,11 @@ const PlayRecipePage = () => {
                     ) : currentStep < totalSteps - 1 ? (
                         <button
                         className={`control-btn next pulse-glow`}
-                        onClick={nextStep}
+                        onClick={() => {
+                            setStepStarted(false);       
+                            setElapsedTime(0);   
+                            nextStep();
+                        }}
                         >
                         Next Step →
                         </button>
