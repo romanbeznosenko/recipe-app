@@ -110,6 +110,7 @@ const PlayRecipePage = () => {
     const [cookingTips, setCookingTips] = useState([]);
     const [elapsedTime, setElapsedTime] = useState(0);
     const [flashNextButton, setFlashNextButton] = useState(false);
+    const [stepStarted, setStepStarted] = useState(false);
 
     // Fetch recipe data from API
     useEffect(() => {
@@ -197,45 +198,35 @@ const PlayRecipePage = () => {
         return '#dc3545';
     };
     
-    // Update elapsed time every second while playing
+    // Reset step state when moving to a new step
     useEffect(() => {
-        if (!isPlaying || !currentStepData?.duration) return;
-
-        setElapsedTime(0);
-
-        const interval = setInterval(() => {
-            setElapsedTime(prev => {
-                if (prev >= currentStepData.duration * 60) {
-                    clearInterval(interval);
-                    return prev;
-                }
-                return prev + 1;
-            });
-        }, 10); // 1000 - update every second, 10 - update every 10ms for presentation
-
-        return () => clearInterval(interval);
-    }, [currentStepData, isPlaying]);
-
-    // Flash next button when time is up
-    useEffect(() => {
-        if (!isPlaying || !currentStepData?.duration) return;
-
+        setStepStarted(false);
         setElapsedTime(0);
         setFlashNextButton(false);
+    }, [currentStepData]);
+
+    // Timer logic that only runs if stepStarted is true
+    useEffect(() => {
+        if (!isPlaying || !currentStepData?.duration || !stepStarted) return;
 
         const interval = setInterval(() => {
             setElapsedTime(prev => {
-                if (prev >= currentStepData.duration * 60) {
+                const totalSeconds = currentStepData.duration * 60;
+                const next = prev + 1;
+
+                if (next >= totalSeconds) {
                     clearInterval(interval);
                     setFlashNextButton(true);
-                    return prev;
+                    return totalSeconds;
                 }
-                return prev + 1;
+
+                return next;
             });
-        }, 1000);
+        }, 10); // 10ms for presentation
 
         return () => clearInterval(interval);
-    }, [currentStepData, isPlaying]);
+    }, [currentStepData, isPlaying, stepStarted]);
+
 
 
     if (loading) {
@@ -458,31 +449,73 @@ const PlayRecipePage = () => {
 
                 {/* Navigation controls */}
                 <div className="step-controls">
+                    {/* Left button: Previous or Reset */}
                     <button
-                        className="control-btn prev"
-                        onClick={prevStep}
-                        disabled={currentStep === 0}
+                        className={`control-btn ${(stepStarted || elapsedTime > 0) && !flashNextButton ? 'reset' : 'prev'}`}
+                        onClick={() => {
+                        if ((stepStarted || elapsedTime > 0) && !flashNextButton) {
+                            setStepStarted(false);
+                            setElapsedTime(0);
+                            setFlashNextButton(false);
+                        } else {
+                            prevStep();
+                        }
+                        }}
+                        disabled={!stepStarted && elapsedTime === 0 && currentStep === 0}
                     >
-                        ← Previous Step
+                        {(stepStarted || elapsedTime > 0) && !flashNextButton ? '🔄 Reset' : '← Previous Step'}
                     </button>
 
-                    {currentStep < totalSteps - 1 ? (
+                    {/* Middle & Right buttons or Start button */}
+                    {!stepStarted && elapsedTime === 0 ? (
                         <button
-                            className={`control-btn next ${flashNextButton ? 'pulse-glow' : ''}`}
-                            onClick={nextStep}
+                        className="control-btn start"
+                        onClick={() => setStepStarted(true)}
                         >
-                            Next Step →
+                        ▶️ Start Step
+                        </button>
+                    ) : !flashNextButton ? (
+                        <>
+                        <button
+                            className="control-btn start-stop"
+                            onClick={() => setStepStarted(prev => !prev)}
+                        >
+                            {stepStarted ? '⏸️ Stop' : '▶️ Start'}
+                        </button>
+                        <button
+                            className="control-btn skip"
+                            onClick={() => {
+                                setStepStarted(false);       // Stop the current timer
+                                setElapsedTime(0);           // Reset the elapsed time
+
+                                if (currentStep < totalSteps - 1) {
+                                nextStep();
+                                } else {
+                                finishCooking();
+                                }
+                            }}
+                        >
+                            ⏭️ Skip
+                        </button>
+                        </>
+                    ) : currentStep < totalSteps - 1 ? (
+                        <button
+                        className={`control-btn next pulse-glow`}
+                        onClick={nextStep}
+                        >
+                        Next Step →
                         </button>
                     ) : (
                         <button
-                            className={`control-btn finish ${flashNextButton ? 'pulse-glow' : ''}`}
-                            onClick={finishCooking}
+                        className={`control-btn finish pulse-glow`}
+                        onClick={finishCooking}
                         >
-                            🎉 Finish Cooking
+                        🎉 Finish Cooking
                         </button>
                     )}
+                    </div>
 
-                </div>
+
             </div>
         </div>
     );
